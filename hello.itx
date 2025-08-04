@@ -1,0 +1,3 @@
+let wordList: ord = ["Hello", " World"]
+
+output wordList[0], wordList[1]

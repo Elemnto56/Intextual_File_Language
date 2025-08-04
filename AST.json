@@ -1,0 +1,29 @@
+[
+  {
+    "line": 1,
+    "meta": {
+      "math": false,
+      "ord-ref": {},
+      "raw_type": "ORDER"
+    },
+    "type": "let",
+    "var_name": "wordList",
+    "var_type": "ord",
+    "var_value": [
+      "Hello",
+      " World"
+    ]
+  },
+  {
+    "line": 3,
+    "meta": {
+      "print_type": "mixed",
+      "raw_type": "none"
+    },
+    "type": "output",
+    "value": [
+      "wordList[0]",
+      "wordList[1]"
+    ]
+  }
+]
