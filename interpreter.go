@@ -12,7 +12,7 @@ import (
 
 func Interpreter() {
 	// Grab AST
-	bytes, _ := os.ReadFile("AST.json")
+	bytes, _ := os.ReadFile("./.intext/cache/AST.json")
 	nodes := []map[string]interface{}{}
 	err := json.Unmarshal(bytes, &nodes)
 	Check(err)

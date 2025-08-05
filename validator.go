@@ -69,7 +69,7 @@ func validateVal(varType interface{}, varValue interface{}, line int, meta strin
 
 func Validator() {
 	// Take in AST.json
-	b, _ := os.ReadFile("AST.json")
+	b, _ := os.ReadFile("./.intext/cache/AST.json")
 	nodes := []map[string]interface{}{}
 	err := json.Unmarshal(b, &nodes)
 	Check(err)

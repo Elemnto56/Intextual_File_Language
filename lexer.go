@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -151,6 +152,23 @@ func Lexer(filename string) {
 						"TYPE": "KEYWORD",
 						"VAL":  temp,
 						"LINE": index + 1,
+					})
+				} else if Contains([]interface{}{"if"}, temp) {
+					var rawCatch string
+					for tempI := 0; tempI < len(line) && string(line[i]) != "{"; {
+						tempI = i
+
+						rawCatch += string(line[i])
+
+						i++
+					}
+
+					cleanCatch := strings.TrimSpace(rawCatch)
+					allTokens = append(allTokens, map[string]interface{}{
+						"TYPE":     "LOGIC",
+						"VAL":      cleanCatch,
+						"SUB-TYPE": "if",
+						"LINE":     index + 1,
 					})
 				} else if Contains([]interface{}{"read", "write", "append", "del", "remove"}, temp) {
 					allTokens = append(allTokens, map[string]interface{}{
@@ -327,7 +345,7 @@ func Lexer(filename string) {
 
 		if len(allTokens) > 0 {
 			last := allTokens[len(allTokens)-1]
-			if last["TYPE"] != "SYMBOL" || last["VAL"] != ";" {
+			if !Contains([]interface{}{"SYMBOL", "LCURL", "RCURL"}, last["TYPE"]) || !Contains([]interface{}{";", "{", "}"}, last["VAL"]) {
 				allTokens = append(allTokens, map[string]interface{}{
 					"TYPE": "SYMBOL",
 					"VAL":  ";",
@@ -340,6 +358,7 @@ func Lexer(filename string) {
 	// Finally add to tokens.json
 	b, err := json.MarshalIndent(allTokens, "", "  ")
 	Check(err)
-	os.WriteFile("tokens.json", b, 0666)
-
+	cacheDir := filepath.Join(".intext", "cache")
+	os.MkdirAll(cacheDir, 0766)
+	os.WriteFile("./.intext/cache/Tokens.json", b, 0666)
 }

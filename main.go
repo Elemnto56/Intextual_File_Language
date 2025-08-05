@@ -2,33 +2,66 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"strings"
+
+	"github.com/spf13/cobra"
 )
 
 func main() {
-	args := os.Args
-
-	// TUI
-	if len(args) == 1 {
-		//TUI()
-		fmt.Println("You forgot the filename")
-		os.Exit(1)
+	var rootCmd = &cobra.Command{
+		Use:   "./ITX-CLI",
+		Short: "Run and manage Intext scripts from the terminal",
+		Long:  "ITX-CLI gives you tools to run, validate, and interact with Intext files directly from the terminal. You can control ISEC behavior, inspect file structure, and customize script execution with ease.",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println("Welcome to ITX-CLI! Use --help for usage info")
+		},
 	}
 
-	// Standard Path
-	if len(args) > 2 {
-		panic("Usage ./lexer <Intext File>")
+	var versionCmd = &cobra.Command{
+		Use:   "version",
+		Short: "See version info",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println(`
+ __     __   __     ______   ______     __  __     ______  
+/\ \   /\ "-.\ \   /\__  _\ /\  ___\   /\_\_\_\   /\__  _\ 
+\ \ \  \ \ \-.  \  \/_/\ \/ \ \  __\   \/_/\_\/_  \/_/\ \/ 
+ \ \_\  \ \_\\"\_\    \ \_\  \ \_____\   /\_\/\_\    \ \_\ 
+  \/_/   \/_/ \/_/     \/_/   \/_____/   \/_/\/_/     \/_/ 
+                                                           `)
+			fmt.Println(`
+			-----------
+		Version: v0.8									
+		Codename: Where's the Logic?
+		Developer: Elemnto56 @ Github`)
+
+		},
 	}
 
-	filename := args[1]
-
-	if !strings.HasSuffix(filename, ".itx") {
-		panic("File is not an Intext File")
+	var runCmd = &cobra.Command{
+		Use:   "run [filename].itx",
+		Short: "Execute your Intext files",
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			filename := args[0]
+			Lexer(filename)
+			Parser()
+			Validator()
+			Interpreter()
+		},
 	}
 
-	Lexer(filename)
-	Parser()
-	Validator()
-	Interpreter()
+	var testCmd = &cobra.Command{
+		Use:   "test",
+		Short: "Test stuff",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println("x \u003e 1")
+		},
+	}
+
+	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(runCmd)
+	rootCmd.AddCommand(testCmd)
+
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Println(err)
+	}
 }
