@@ -1,7 +1,2 @@
-site_name: My Docs
-theme:
-  name: material
-  palette:
-    scheme: slate
-    primary: teal
-    accent: lime
+site_name: Intext Documentation
+theme: windmill-dark
