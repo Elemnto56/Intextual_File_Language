@@ -2,10 +2,27 @@
   {
     "line": 1,
     "meta": {
+      "math": false,
+      "raw_type": "concat"
+    },
+    "type": "let",
+    "var_name": "x",
+    "var_type": "string",
+    "var_value": [
+      "Hello",
+      "true",
+      "5",
+      "World",
+      "!"
+    ]
+  },
+  {
+    "line": 3,
+    "meta": {
       "print_type": "simple",
-      "raw_type": "STRING"
+      "raw_type": "IDENTIFIER"
     },
     "type": "output",
-    "value": "Hello"
+    "value": "x"
   }
 ]

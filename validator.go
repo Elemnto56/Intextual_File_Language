@@ -210,7 +210,10 @@ func Validator() {
 				}
 			} else if metadata["print_type"] == "mathematics" {
 				cmp, err := expr.Compile(fmt.Sprint(value))
-				Check(err)
+				if err != nil {
+					fmt.Printf("%s%v%s\n", Red, err, Reset)
+					os.Exit(1)
+				}
 				ans, errd := expr.Run(cmp, variables)
 				Check(errd)
 				if f, ok := ans.(float64); ok && math.IsNaN(f) {

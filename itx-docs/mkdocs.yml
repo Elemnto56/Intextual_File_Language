@@ -1,2 +1,15 @@
-site_name: Intext Documentation
-theme: windmill-dark
+site_name: Documentation
+
+theme: 
+  name: material
+  palette:
+    - scheme: slate
+      primary: teal
+      accent: green
+  logo: assets/itx-logo.png  
+
+plugins:
+  - search
+
+extra_css:
+  - style.css

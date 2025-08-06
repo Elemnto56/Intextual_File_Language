@@ -1,1 +1,3 @@
-output "Hello"
+let x: string = "Hello", true, 5, "World", '!';
+
+output x
