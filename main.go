@@ -44,9 +44,9 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			filename := args[0]
 			Lexer(filename)
-			//Parser()
-			//Validator()
-			//Interpreter()
+			Parser()
+			Validator()
+			Interpreter()
 		},
 	}
 
