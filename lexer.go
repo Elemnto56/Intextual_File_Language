@@ -27,10 +27,10 @@ func Contains(slice []interface{}, look interface{}) bool {
 	return false
 }
 
-var pat2 string = `([A-Za-z]+\_*?)+\[[0-9]+\];?`
-var re2 *regexp.Regexp = regexp.MustCompile(pat2)
-
 func Lexer(filename string) {
+
+	pat2 := `([A-Za-z]+\_*?)+\[[0-9]+\];?`
+	re2 := regexp.MustCompile(pat2)
 
 	file, err := os.Open(filename)
 	Check(err)
@@ -147,13 +147,14 @@ func Lexer(filename string) {
 						i++
 					}
 				}
+
 				if Contains([]interface{}{"output", "declare", "let"}, temp) {
 					allTokens = append(allTokens, map[string]interface{}{
 						"TYPE": "KEYWORD",
 						"VAL":  temp,
 						"LINE": index + 1,
 					})
-				} else if Contains([]interface{}{"if"}, temp) {
+				} else if Contains([]interface{}{"if", "else", "else if", "or if"}, temp) {
 					var rawCatch string
 					for tempI := 0; tempI < len(line) && string(line[i]) != "{"; {
 						tempI = i
@@ -200,8 +201,7 @@ func Lexer(filename string) {
 			}
 
 			if i+2 < len(line) && string(line[i:i+3]) == "[[[" {
-				//textCapture := []interface{}{}
-
+				//TODO: textCapture := []interface{}{}
 			}
 
 			// Switch statement for the single employeed bums

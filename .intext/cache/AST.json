@@ -3,26 +3,30 @@
     "line": 1,
     "meta": {
       "math": false,
-      "raw_type": "concat"
+      "raw_type": "STRING"
     },
     "type": "let",
     "var_name": "x",
     "var_type": "string",
-    "var_value": [
-      "Hello",
-      "true",
-      "5",
-      "World",
-      "!"
-    ]
+    "var_value": "Hello World"
   },
   {
+    "body": [
+      {
+        "line": 4,
+        "meta": {
+          "print_type": "simple",
+          "raw_type": "IDENTIFIER"
+        },
+        "type": "output",
+        "value": "x"
+      }
+    ],
+    "condition": "3 \u003e 1",
     "line": 3,
     "meta": {
-      "print_type": "simple",
-      "raw_type": "IDENTIFIER"
+      "sub_type": "if"
     },
-    "type": "output",
-    "value": "x"
+    "type": "logic"
   }
 ]

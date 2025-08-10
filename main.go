@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/expr-lang/expr"
 	"github.com/spf13/cobra"
 )
 
@@ -43,9 +44,9 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			filename := args[0]
 			Lexer(filename)
-			Parser()
-			Validator()
-			Interpreter()
+			//Parser()
+			//Validator()
+			//Interpreter()
 		},
 	}
 
@@ -53,7 +54,8 @@ func main() {
 		Use:   "test",
 		Short: "Test stuff",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println("x \u003e 1")
+			val, _ := expr.Eval("0 != 0", nil)
+			fmt.Println(val)
 		},
 	}
 

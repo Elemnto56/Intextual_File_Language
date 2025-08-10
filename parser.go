@@ -473,9 +473,52 @@ func Parser() {
 			}
 
 		} else if token.Type == "LOGIC" {
+			meta := make(map[string]interface{})
+
 			switch token.SubType {
 			case "if":
-				// TODO
+				condition := token.Val
+				ifLine := token.Line
+
+				advance(&index)
+				token := current(&index, tokens)
+				if token.Type == "LCURL" {
+					advance(&index)
+					token = current(&index, tokens)
+
+					// Capturing loop starts
+					capture := []Tokens{}
+					capture = append(capture, token) // put in current token
+
+					for {
+						if token.Type == "RCURL" {
+							break
+						}
+
+						advance(&index)
+						token = current(&index, tokens)
+						capture = append(capture, token)
+					}
+
+					logicAST := ReRunParser(capture)
+
+					if token.Type == "RCURL" {
+						meta["sub_type"] = "if"
+						ast = append(ast, map[string]interface{}{
+							"type":      "logic",
+							"meta":      meta,
+							"line":      ifLine,
+							"condition": condition,
+							"body":      logicAST,
+						})
+					} else {
+						err := NewError("MalformedSyntax", token.Line, fmt.Sprintf("if %v { \n ... %s???%s", condition, Red, Reset), "This if-statement is missing a right-standing curly brace", true, "")
+						err.Throw()
+					}
+				} else {
+					err := NewError("MalformedSyntax", token.Line, fmt.Sprintf("if %v %s???%s \n ... }", condition, Red, Reset), "This if-statement is missing a left-standing curly brace", true, "")
+					err.Throw()
+				}
 			}
 		}
 
