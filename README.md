@@ -14,4 +14,4 @@ https://docs.codekeg.dev
 <i>Also, check out my [CodeKeg Netowork](https://github.com/Elemnto56/CodeKeg-Network) repo if you want to share your own projects!</i>
 
 ## Licensing
-Intext is under the GNU GPL v3 license. Which basically means that you can use, add, and create stuff with Intext, <b><i>but</b></i>, you need to give credit to Intext and Elemnto56 for being the original providers of your product(s).
+Intext is under the GNU GPL v3 license. Which basically means that you can use, add, and create stuff with Intext, <b><i>but</b></i>, you need to give credit to Intext and Elemnto56 for being the original providers of your product(s). Also, make your project open-source aka free, no paywalls or anything that involves the user needing pay to use the product.
