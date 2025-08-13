@@ -34,7 +34,9 @@ func Parser() {
 	// AST
 	ast := []map[string]interface{}{}
 
+	// Iterators
 	index := 0
+
 	for index < len(tokens) {
 		token := current(&index, tokens)
 
@@ -59,7 +61,7 @@ func Parser() {
 							if token.Type == "OPERATOR" && token.Val == "=" {
 								advance(&index)
 								token := current(&index, tokens)
-								if Contains([]interface{}{"INT", "BOOL", "STRING", "CHAR", "ORD", "IDENTIFIER"}, token.Type) {
+								if Contains([]interface{}{"INT", "BOOL", "STRING", "CHAR", "ORD", "IDENTIFIER", "TXT BLK"}, token.Type) {
 									value := token.Val
 									_type := token.Type
 									meta["raw_type"] = _type
@@ -478,6 +480,11 @@ func Parser() {
 			switch token.SubType {
 			case "if":
 				condition := token.Val
+
+				if fmt.Sprint(condition) == "" {
+					condition = true
+				}
+
 				ifLine := token.Line
 
 				advance(&index)
@@ -516,8 +523,66 @@ func Parser() {
 						err.Throw()
 					}
 				} else {
-					err := NewError("MalformedSyntax", token.Line, fmt.Sprintf("if %v %s???%s \n ... }", condition, Red, Reset), "This if-statement is missing a left-standing curly brace", true, "")
+					err := NewError("MalformedSyntax", ifLine, fmt.Sprintf("if %v %s???%s \n ... }", condition, Red, Reset), "This if-statement is missing a left-standing curly brace", true, "")
 					err.Throw()
+				}
+			case "while":
+				condition := token.Val
+				whileLine := token.Line
+
+				advance(&index)
+				token := current(&index, tokens)
+
+				if token.Type == "LCURL" {
+					advance(&index)
+					token = current(&index, tokens)
+
+					capture := []Tokens{}
+					capture = append(capture, token)
+
+					for {
+						if temp := index + 1; current(&temp, tokens).Type == "RCURL" {
+							break
+						}
+
+						advance(&index)
+						token = current(&index, tokens)
+						capture = append(capture, token)
+					}
+
+					logicAST := ReRunParser(capture)
+
+					advance(&index)
+					token = current(&index, tokens)
+					if token.Type == "RCURL" {
+						meta["sub_type"] = "while"
+						ast = append(ast, map[string]interface{}{
+							"type":      "logic",
+							"meta":      meta,
+							"line":      whileLine,
+							"condition": condition,
+							"body":      logicAST,
+						})
+					} else {
+						err := NewError("MalformedSyntax", whileLine, fmt.Sprintf("while %v { \n ... %s???%s", condition, Red, Reset), "This while loop is missing a right-standing curly brace", true, "")
+						err.Throw()
+					}
+				} else {
+					err := NewError("MalformedSyntax", whileLine, fmt.Sprintf("while %v %s???%s \n ... }", condition, Red, Reset), "This while loop is missing a left-standing curly brace", true, "")
+					err.Throw()
+				}
+			}
+		} else if token.Type == "IDENTIFIER" {
+			advance(&index)
+			token := current(&index, tokens)
+
+			if token.Type == "OPERATOR" {
+				switch token.Val {
+				case "=":
+					advance(&index)
+					token = current(&index, tokens)
+
+					//TODO
 				}
 			}
 		}

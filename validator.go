@@ -101,6 +101,13 @@ func Validator() {
 						}
 					case "concat":
 						ValidatorVariables[validName] = validVal
+					case "TXT BLK":
+						var catch string
+						for _, line := range validVal.([]interface{}) {
+							catch += fmt.Sprint(line)
+						}
+
+						ValidatorVariables[validName] = catch
 					}
 				case "bool":
 					validVal, err := strconv.ParseBool(fmt.Sprint(validVal))
@@ -196,13 +203,18 @@ func Validator() {
 					err := NewError("VariableNotFound", inte, fmt.Sprintf("del(%s%v%s);", Red, meta["target"], Reset), "This variable was not found", true, "")
 					err.Throw()
 				}
+
+				if _, err := os.Stat(fmt.Sprint(meta["target"])); err != nil {
+					erra := NewError("FileError", inte, fmt.Sprintf("del(%s%s%s);", Red, fmt.Sprint(meta["target"]), Reset), "The following file does not exist", true, "")
+					erra.Throw()
+				}
 			}
 
 		case "logic":
 			meta := node["meta"].(map[string]interface{})
 
 			switch meta["sub_type"] {
-			case "if":
+			case "if", "while":
 				cond := fmt.Sprint(node["condition"])
 				body := node["body"].([]interface{})
 

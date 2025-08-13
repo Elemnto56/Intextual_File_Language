@@ -75,6 +75,7 @@ func Lexer(filename string) {
 					"VAL":  string(line[i : i+2]),
 					"LINE": index + 1,
 				})
+				i += 1
 				continue
 			}
 
@@ -154,8 +155,28 @@ func Lexer(filename string) {
 						"VAL":  temp,
 						"LINE": index + 1,
 					})
+				} else if Contains([]interface{}{"repeat", "while"}, temp) {
+					var rawLogicCatch string
+
+					for tempI := 0; tempI < len(line) && string(line[i]) != "{"; {
+						tempI = i
+
+						rawLogicCatch += string(line[i])
+
+						i++
+					}
+
+					logicCatch := strings.TrimSpace(rawLogicCatch)
+
+					allTokens = append(allTokens, map[string]interface{}{
+						"TYPE":     "LOGIC",
+						"VAL":      logicCatch,
+						"SUB-TYPE": "while",
+						"LINE":     index + 1,
+					})
 				} else if Contains([]interface{}{"if", "else", "else if", "or if"}, temp) {
 					var rawCatch string
+
 					for tempI := 0; tempI < len(line) && string(line[i]) != "{"; {
 						tempI = i
 
@@ -164,7 +185,8 @@ func Lexer(filename string) {
 						i++
 					}
 
-					cleanCatch := strings.TrimSpace(rawCatch)
+					rawwCatch := strings.Replace(rawCatch, "if ", "", 1)
+					cleanCatch := strings.TrimSpace(rawwCatch)
 					allTokens = append(allTokens, map[string]interface{}{
 						"TYPE":     "LOGIC",
 						"VAL":      cleanCatch,
@@ -201,7 +223,23 @@ func Lexer(filename string) {
 			}
 
 			if i+2 < len(line) && string(line[i:i+3]) == "[[[" {
-				//TODO: textCapture := []interface{}{}
+				i += 3
+				captureBLK := []interface{}{}
+
+				for index++; index < len(lines); {
+					if strings.HasPrefix(lines[index], "]]]") {
+						break
+					}
+					captureBLK = append(captureBLK, lines[index])
+					index += 1
+				}
+
+				allTokens = append(allTokens, map[string]interface{}{
+					"TYPE": "TXT BLK",
+					"VAL":  captureBLK,
+					"LINE": index + 1,
+				})
+				continue
 			}
 
 			// Switch statement for the single employeed bums
@@ -345,7 +383,7 @@ func Lexer(filename string) {
 
 		if len(allTokens) > 0 {
 			last := allTokens[len(allTokens)-1]
-			if !Contains([]interface{}{"SYMBOL", "LCURL", "RCURL"}, last["TYPE"]) || !Contains([]interface{}{";", "{", "}"}, last["VAL"]) {
+			if !Contains([]interface{}{"SYMBOL", "LCURL", "RCURL", "OPERATOR", "INT"}, last["TYPE"]) || !Contains([]interface{}{";", "{", "}", "="}, last["VAL"]) {
 				allTokens = append(allTokens, map[string]interface{}{
 					"TYPE": "SYMBOL",
 					"VAL":  ";",

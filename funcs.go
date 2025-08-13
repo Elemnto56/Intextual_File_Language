@@ -504,7 +504,7 @@ func ValidateVal(varType interface{}, varValue interface{}, line int, meta strin
 		}
 		return true
 	case "string":
-		if Contains([]interface{}{"STRING", "FUNC", "IDENTIFIER", "concat"}, meta) {
+		if Contains([]interface{}{"STRING", "FUNC", "IDENTIFIER", "concat", "TXT BLK"}, meta) {
 			return true
 		} else {
 			err2 := NewError("TypeMismatch", line, fmt.Sprintf("let x: string = %s%s%s;", Red, fmt.Sprint(varValue), Reset), "The following value was not a string", true, typemismatch)

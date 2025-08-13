@@ -6,6 +6,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/expr-lang/expr"
 )
@@ -17,6 +18,7 @@ var re2 *regexp.Regexp = regexp.MustCompile(pat2)
 var InterpreterVariables = make(map[string]interface{})
 
 func Interpreter() {
+
 	// Grab AST
 	bytes, _ := os.ReadFile("./.intext/cache/AST.json")
 	nodes := []map[string]interface{}{}
@@ -24,7 +26,9 @@ func Interpreter() {
 	Check(err)
 
 	// Iterate through each node
-	for _, node := range nodes {
+	for index := 0; index < len(nodes); index++ {
+		node := nodes[index]
+
 		switch node["type"] {
 		case "let", "declare":
 			name := node["var_name"].(string)
@@ -72,6 +76,13 @@ func Interpreter() {
 								catch += fmt.Sprint(element)
 							}
 						}
+						InterpreterVariables[name] = catch
+					case "TXT BLK":
+						var rawCatch string
+						for _, line := range val.([]interface{}) {
+							rawCatch += fmt.Sprintf("%s \n", fmt.Sprint(line))
+						}
+						catch := strings.TrimSpace(rawCatch)
 						InterpreterVariables[name] = catch
 					}
 				case "bool":
@@ -214,21 +225,59 @@ func Interpreter() {
 
 			switch meta["sub_type"] {
 			case "if":
-				body := node["body"].([]interface{})
+				captureIf := []map[string]interface{}{}
 
-				cond := fmt.Sprint(node["condition"])
-				val, _ := expr.Eval(cond, InterpreterVariables)
+			captureLoop:
+				for i, element := range nodes {
 
-				captureAST := []map[string]interface{}{}
+					captureIf = append(captureIf, element)
 
-				for _, element := range body {
-					captureAST = append(captureAST, element.(map[string]interface{}))
+					if i+1 < len(nodes) && nodes[i+1]["meta"].(map[string]interface{})["sub_type"] != "if" {
+						break captureLoop
+					}
 				}
 
-				if v, _ := strconv.ParseBool(fmt.Sprint(val)); v {
-					reRunInterpreter(captureAST)
-				} else {
-					continue
+				for _, node := range captureIf {
+
+					body := node["body"].([]interface{})
+
+					cond := fmt.Sprint(node["condition"])
+					val, _ := expr.Eval(cond, InterpreterVariables)
+
+					captureAST := []map[string]interface{}{}
+
+					for _, element := range body {
+						captureAST = append(captureAST, element.(map[string]interface{}))
+					}
+
+					v, _ := strconv.ParseBool(fmt.Sprint(val))
+					if v == true {
+						reRunInterpreter(captureAST)
+						break
+					}
+
+				}
+
+				temp := &index
+				index = *temp + len(captureIf)
+
+			case "while":
+				cond := fmt.Sprint(node["condition"])
+				body := node["body"].([]interface{})
+
+				whileCapture := []map[string]interface{}{}
+
+				for _, element := range body {
+					whileCapture = append(whileCapture, element.(map[string]interface{}))
+				}
+
+				for { // Updates logic
+					rawLogic, _ := expr.Eval(cond, InterpreterVariables)
+					logic, _ := strconv.ParseBool(fmt.Sprint(rawLogic))
+
+					for logic { // Runs logic
+						reRunInterpreter(whileCapture)
+					}
 				}
 			}
 		}
