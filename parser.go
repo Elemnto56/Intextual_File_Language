@@ -7,10 +7,11 @@ import (
 )
 
 type Tokens struct {
-	Type    string      `json:"TYPE"`
-	SubType string      `json:"SUB-TYPE"`
-	Val     interface{} `json:"VAL"`
-	Line    int         `json:"LINE"`
+	Type    string                 `json:"TYPE"`
+	SubType string                 `json:"SUB-TYPE"`
+	Meta    map[string]interface{} `json:"META"`
+	Val     interface{}            `json:"VAL"`
+	Line    int                    `json:"LINE"`
 }
 
 func advance(index *int) {
@@ -65,11 +66,23 @@ func Parser() {
 									value := token.Val
 									_type := token.Type
 									meta["raw_type"] = _type
-									meta["math"] = false
 
 									temp := index + 1 // Did this in order for it to be a sight into the future
-									if current(&temp, tokens).Type == "SYMBOL" && current(&temp, tokens).Val == ";" {
+									if token.Meta["assignment"] == "math" {
+										meta["math"] = true
+
+										ast = append(ast, map[string]interface{}{
+											"type":      grandType,
+											"var_type":  Type,
+											"var_name":  name,
+											"var_value": value,
+											"line":      token.Line,
+											"meta":      meta,
+										})
 										advance(&index)
+									} else if current(&temp, tokens).Type == "SYMBOL" && current(&temp, tokens).Val == ";" {
+										advance(&index)
+										meta["math"] = false
 										ast = append(ast, map[string]interface{}{
 											"type":      grandType,
 											"var_type":  Type,
@@ -571,8 +584,18 @@ func Parser() {
 					err := NewError("MalformedSyntax", whileLine, fmt.Sprintf("while %v %s???%s \n ... }", condition, Red, Reset), "This while loop is missing a left-standing curly brace", true, "")
 					err.Throw()
 				}
+			case "repeat":
+				cond := fmt.Sprint(token.Val)
+
+				if cmpRegEx(cond, `([A-Za-z]|\_|\d+)+\s->\s\(?.+\)?`) {
+					//TODO
+				}
 			}
 		} else if token.Type == "IDENTIFIER" {
+			meta := make(map[string]interface{})
+
+			exprVal := token.Val
+
 			advance(&index)
 			token := current(&index, tokens)
 
@@ -582,7 +605,31 @@ func Parser() {
 					advance(&index)
 					token = current(&index, tokens)
 
-					//TODO
+				case "+=", "*=", "-=", "/=":
+					incrType := token.Val
+
+					advance(&index)
+					token = current(&index, tokens)
+
+					incrValue := token.Val
+
+					advance(&index)
+					token = current(&index, tokens)
+
+					if token.Type == "SYMBOL" && token.Val == ";" {
+						meta["incr_type"] = incrType
+						meta["target"] = exprVal
+						meta["new_val"] = incrValue
+						ast = append(ast, map[string]interface{}{
+							"type":     "expr",
+							"sub_type": "incr",
+							"meta":     meta,
+							"line":     token.Line,
+						})
+					} else {
+						err := NewError("UnknownValue", token.Line, fmt.Sprintf("%v %v %v %s<--%s", exprVal, incrType, incrValue, Red, Reset), "An unknown value or known misplaced value is in this line", true, "self-incr can only have a single value to be added to itself")
+						err.Throw()
+					}
 				}
 			}
 		}

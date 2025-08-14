@@ -59,6 +59,11 @@ func Lexer(filename string) {
 			continue
 		}
 
+		if cmpRegEx(line, `crunch\(\s?.+\,\s?.+\,\s?.+\);?`) {
+			err := NewError("DeprecationErr", index+1, line, "A deprecated function was found", false, "crunch() is no longer used. Do math instead. (e.g. output 5 + 5).")
+			err.Throw()
+		}
+
 	outer: // Label for loop
 		for i := 0; i < len(line); i++ { // NOTE: Some are place early so the others behind don't get triggered beforehand
 			char := rune(line[i])
@@ -171,7 +176,7 @@ func Lexer(filename string) {
 					allTokens = append(allTokens, map[string]interface{}{
 						"TYPE":     "LOGIC",
 						"VAL":      logicCatch,
-						"SUB-TYPE": "while",
+						"SUB-TYPE": temp,
 						"LINE":     index + 1,
 					})
 				} else if Contains([]interface{}{"if", "else", "else if", "or if"}, temp) {
@@ -212,11 +217,32 @@ func Lexer(filename string) {
 						"LINE": index + 1,
 					})
 				} else {
-					allTokens = append(allTokens, map[string]interface{}{
-						"TYPE": "IDENTIFIER",
-						"VAL":  temp,
-						"LINE": index + 1,
-					})
+					if i+1 < len(line) && Contains([]interface{}{"+ ", "- ", "* ", "/ "}, string(line[i+1])) {
+						var mathCap string
+						mathCap += string(char)
+
+						for i < len(line) && (unicode.IsDigit(rune(line[i])) || string(line[i]) == "." || Contains([]interface{}{"+", "-", "/", "*", " "}, string(line[i]))) {
+							mathCap += string(line[i])
+							i += 1
+						}
+
+						finalMath := strings.TrimSpace(mathCap)
+
+						allTokens = append(allTokens, map[string]interface{}{
+							"TYPE": "IDENTIFIER",
+							"META": map[string]string{
+								"assignment": "math",
+							},
+							"VAL":  finalMath,
+							"LINE": index + 1,
+						})
+					} else {
+						allTokens = append(allTokens, map[string]interface{}{
+							"TYPE": "IDENTIFIER",
+							"VAL":  temp,
+							"LINE": index + 1,
+						})
+					}
 				}
 				i -= 1
 				continue

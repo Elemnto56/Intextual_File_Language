@@ -44,7 +44,7 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			filename := args[0]
 			Lexer(filename)
-			Parser()
+			//Parser()
 			//Validator()
 			//Interpreter()
 		},
@@ -54,10 +54,7 @@ func main() {
 		Use:   "test",
 		Short: "Test stuff",
 		Run: func(cmd *cobra.Command, args []string) {
-			val, _ := expr.Eval("y += 1", map[string]interface{}{
-				"x": 0,
-				"y": 5,
-			})
+			val, _ := expr.Eval("2", nil)
 			fmt.Println(val)
 		},
 	}

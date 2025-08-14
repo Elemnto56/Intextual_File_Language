@@ -271,13 +271,57 @@ func Interpreter() {
 					whileCapture = append(whileCapture, element.(map[string]interface{}))
 				}
 
-				for { // Updates logic
-					rawLogic, _ := expr.Eval(cond, InterpreterVariables)
-					logic, _ := strconv.ParseBool(fmt.Sprint(rawLogic))
+				rawLogic, _ := expr.Eval(cond, InterpreterVariables)
+				logic, _ := strconv.ParseBool(strings.TrimSpace(fmt.Sprint(rawLogic)))
 
-					for logic { // Runs logic
-						reRunInterpreter(whileCapture)
-					}
+				for logic { // Updates logic
+					rawLogic, _ = expr.Eval(cond, InterpreterVariables)
+					logic, _ = strconv.ParseBool(strings.TrimSpace(fmt.Sprint(rawLogic)))
+					reRunInterpreter(whileCapture)
+				}
+			}
+		case "expr":
+			meta := node["meta"].(map[string]interface{})
+
+			switch node["sub_type"] {
+			case "incr":
+				line, _ := strconv.Atoi(fmt.Sprint(node["line"]))
+
+				incrType := meta["incr_type"]
+				newValue := meta["new_val"]
+
+				rawTarget := fmt.Sprint(meta["target"])
+				target := InterpreterVariables[rawTarget]
+
+				intTarget, err := strconv.Atoi(fmt.Sprint(target))
+				if err != nil {
+					err0 := NewError("TypeMismatch", line, fmt.Sprintf("%s%v%s %v %v", Red, rawTarget, Reset, incrType, newValue), "The following variable was not an int", true, typemismatch)
+					err0.Throw()
+				}
+
+				intNewVal, erra := strconv.Atoi(fmt.Sprint(newValue))
+				if erra != nil {
+					err0 := NewError("TypeMismatch", line, fmt.Sprintf("%v %v %s%v%s", rawTarget, incrType, Red, newValue, Reset), "The following value was not an int", true, typemismatch)
+					err0.Throw()
+				}
+
+				switch incrType {
+				case "+=":
+					val, _ := expr.Eval(fmt.Sprintf("%v + %v", target, newValue), InterpreterVariables)
+
+					InterpreterVariables[rawTarget] = val
+				case "-=":
+					val := intTarget - intNewVal
+
+					InterpreterVariables[rawTarget] = val
+				case "*=":
+					val := intTarget * intNewVal
+
+					InterpreterVariables[rawTarget] = val
+				case "/=":
+					val := intTarget / intNewVal
+
+					InterpreterVariables[rawTarget] = val
 				}
 			}
 		}
@@ -285,7 +329,9 @@ func Interpreter() {
 }
 
 func reRunInterpreter(nodes []map[string]interface{}) {
-	for _, node := range nodes {
+	for index := 0; index < len(nodes); index++ {
+		node := nodes[index]
+
 		switch node["type"] {
 		case "let", "declare":
 			name := node["var_name"].(string)
@@ -333,6 +379,13 @@ func reRunInterpreter(nodes []map[string]interface{}) {
 								catch += fmt.Sprint(element)
 							}
 						}
+						InterpreterVariables[name] = catch
+					case "TXT BLK":
+						var rawCatch string
+						for _, line := range val.([]interface{}) {
+							rawCatch += fmt.Sprintf("%s \n", fmt.Sprint(line))
+						}
+						catch := strings.TrimSpace(rawCatch)
 						InterpreterVariables[name] = catch
 					}
 				case "bool":
@@ -475,7 +528,104 @@ func reRunInterpreter(nodes []map[string]interface{}) {
 
 			switch meta["sub_type"] {
 			case "if":
+				captureIf := []map[string]interface{}{}
 
+			captureLoop:
+				for i, element := range nodes {
+
+					captureIf = append(captureIf, element)
+
+					if i+1 < len(nodes) && nodes[i+1]["meta"].(map[string]interface{})["sub_type"] != "if" {
+						break captureLoop
+					}
+				}
+
+				for _, node := range captureIf {
+
+					body := node["body"].([]interface{})
+
+					cond := fmt.Sprint(node["condition"])
+					val, _ := expr.Eval(cond, InterpreterVariables)
+
+					captureAST := []map[string]interface{}{}
+
+					for _, element := range body {
+						captureAST = append(captureAST, element.(map[string]interface{}))
+					}
+
+					v, _ := strconv.ParseBool(fmt.Sprint(val))
+					if v == true {
+						reRunInterpreter(captureAST)
+						break
+					}
+
+				}
+
+				temp := &index
+				index = *temp + len(captureIf)
+
+			case "while":
+				cond := fmt.Sprint(node["condition"])
+				body := node["body"].([]interface{})
+
+				whileCapture := []map[string]interface{}{}
+
+				for _, element := range body {
+					whileCapture = append(whileCapture, element.(map[string]interface{}))
+				}
+
+				for { // Updates logic
+					rawLogic, _ := expr.Eval(cond, InterpreterVariables)
+					logic, _ := strconv.ParseBool(fmt.Sprint(rawLogic))
+
+					for logic { // Runs logic
+						reRunInterpreter(whileCapture)
+					}
+				}
+			}
+		case "expr":
+			meta := node["meta"].(map[string]interface{})
+
+			switch node["sub_type"] {
+			case "incr":
+				line, _ := strconv.Atoi(fmt.Sprint(node["line"]))
+
+				incrType := meta["incr_type"]
+				newValue := meta["new_val"]
+
+				rawTarget := fmt.Sprint(meta["target"])
+				target := InterpreterVariables[rawTarget]
+
+				intTarget, err := strconv.Atoi(fmt.Sprint(target))
+				if err != nil {
+					err0 := NewError("TypeMismatch", line, fmt.Sprintf("%s%v%s %v %v", Red, rawTarget, Reset, incrType, newValue), "The following variable was not an int", true, typemismatch)
+					err0.Throw()
+				}
+
+				intNewVal, erra := strconv.Atoi(fmt.Sprint(newValue))
+				if erra != nil {
+					err0 := NewError("TypeMismatch", line, fmt.Sprintf("%v %v %s%v%s", rawTarget, incrType, Red, newValue, Reset), "The following value was not an int", true, typemismatch)
+					err0.Throw()
+				}
+
+				switch incrType {
+				case "+=":
+					val, _ := expr.Eval(fmt.Sprintf("%v + %v", target, newValue), InterpreterVariables)
+
+					InterpreterVariables[rawTarget] = val
+				case "-=":
+					val := intTarget - intNewVal
+
+					InterpreterVariables[rawTarget] = val
+				case "*=":
+					val := intTarget * intNewVal
+
+					InterpreterVariables[rawTarget] = val
+				case "/=":
+					val := intTarget / intNewVal
+
+					InterpreterVariables[rawTarget] = val
+				}
 			}
 		}
 	}

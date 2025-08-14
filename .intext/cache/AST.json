@@ -2,12 +2,10 @@
   {
     "line": 1,
     "meta": {
-      "math": false,
-      "raw_type": "INT"
+      "print_type": "simple",
+      "raw_type": "STRING"
     },
-    "type": "let",
-    "var_name": "y",
-    "var_type": "int",
-    "var_value": 0
+    "type": "output",
+    "value": "Hello World"
   }
 ]

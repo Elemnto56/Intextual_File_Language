@@ -66,6 +66,8 @@ func Validator() {
 						ans, err := expr.Eval(fmt.Sprint(validVal), ValidatorVariables)
 						if err != nil {
 							fmt.Printf("%s%v%s", Red, NullCheck(fmt.Sprint(err), true), Reset)
+							fmt.Println()
+							fmt.Printf("%sHint%s: Did you forget to declare a variable?\n", Green, Reset)
 							os.Exit(1)
 						}
 						if f, ok := ans.(float64); ok && math.IsNaN(f) {
@@ -231,6 +233,16 @@ func Validator() {
 
 				reRunValidator(captureAST)
 			}
+		case "expr":
+			meta := node["meta"].(map[string]interface{})
+
+			switch node["sub_type"] {
+			case "incr":
+				if _, ok := ValidatorVariables[fmt.Sprint(meta["target"])]; !ok {
+					err := NewError("VariableNotFound", inte, fmt.Sprintf("%s%v%s %v %v", Red, meta["target"], Reset, meta["incr_type"], meta["new_val"]), "This variable was not found", true, "")
+					err.Throw()
+				}
+			}
 		}
 	}
 
@@ -282,6 +294,8 @@ func reRunValidator(nodes []map[string]interface{}) {
 						ans, err := expr.Eval(fmt.Sprint(validVal), ValidatorVariables)
 						if err != nil {
 							fmt.Printf("%s%v%s", Red, NullCheck(fmt.Sprint(err), true), Reset)
+							fmt.Println()
+							fmt.Printf("%sHint%s: Did you forget to declare a variable?\n", Green, Reset)
 							os.Exit(1)
 						}
 						if f, ok := ans.(float64); ok && math.IsNaN(f) {
@@ -317,6 +331,13 @@ func reRunValidator(nodes []map[string]interface{}) {
 						}
 					case "concat":
 						ValidatorVariables[validName] = validVal
+					case "TXT BLK":
+						var catch string
+						for _, line := range validVal.([]interface{}) {
+							catch += fmt.Sprint(line)
+						}
+
+						ValidatorVariables[validName] = catch
 					}
 				case "bool":
 					validVal, err := strconv.ParseBool(fmt.Sprint(validVal))
@@ -412,18 +433,42 @@ func reRunValidator(nodes []map[string]interface{}) {
 					err := NewError("VariableNotFound", inte, fmt.Sprintf("del(%s%v%s);", Red, meta["target"], Reset), "This variable was not found", true, "")
 					err.Throw()
 				}
+
+				if _, err := os.Stat(fmt.Sprint(meta["target"])); err != nil {
+					erra := NewError("FileError", inte, fmt.Sprintf("del(%s%s%s);", Red, fmt.Sprint(meta["target"]), Reset), "The following file does not exist", true, "")
+					erra.Throw()
+				}
 			}
 
 		case "logic":
 			meta := node["meta"].(map[string]interface{})
 
 			switch meta["sub_type"] {
-			case "if":
+			case "if", "while":
 				cond := fmt.Sprint(node["condition"])
+				body := node["body"].([]interface{})
 
 				if _, err := expr.Eval(cond, ValidatorVariables); err != nil {
 					fmt.Printf("%s%v%s\n", Red, NullCheck(fmt.Sprint(err), true), Reset)
 					os.Exit(1)
+				}
+
+				captureAST := []map[string]interface{}{}
+
+				for _, element := range body {
+					captureAST = append(captureAST, element.(map[string]interface{}))
+				}
+
+				reRunValidator(captureAST)
+			}
+		case "expr":
+			meta := node["meta"].(map[string]interface{})
+
+			switch node["sub_type"] {
+			case "incr":
+				if _, ok := ValidatorVariables[fmt.Sprint(meta["target"])]; !ok {
+					err := NewError("VariableNotFound", inte, fmt.Sprintf("%s%v%s %v %v", Red, meta["target"], Reset, meta["incr_type"], meta["new_val"]), "This variable was not found", true, "")
+					err.Throw()
 				}
 			}
 		}
