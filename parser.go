@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 )
 
 type Tokens struct {
@@ -586,9 +587,59 @@ func Parser() {
 				}
 			case "repeat":
 				cond := fmt.Sprint(token.Val)
+				reLine := token.Line
 
 				if cmpRegEx(cond, `([A-Za-z]|\_|\d+)+\s->\s\(?.+\)?`) {
-					//TODO
+					findDash := strings.IndexRune(cond, '-')
+					iterator := strings.TrimSpace(cond[:findDash])
+
+					findGTT := strings.IndexRune(cond, '>')
+					repeatValue := strings.TrimSpace(cond[1+findGTT:])
+
+					advance(&index)
+					token := current(&index, tokens)
+
+					if token.Type == "LCURL" {
+						advance(&index)
+						token = current(&index, tokens)
+
+						// Capturing loop starts
+						repeatCapture := []Tokens{}
+						repeatCapture = append(repeatCapture, token) // put in current token
+
+						for {
+							if temp := index + 1; current(&temp, tokens).Type == "RCURL" {
+								break
+							}
+
+							advance(&index)
+							token = current(&index, tokens)
+							repeatCapture = append(repeatCapture, token)
+						}
+
+						repeatLogic := ReRunParser(repeatCapture)
+
+						advance(&index)
+						token = current(&index, tokens)
+
+						if token.Type == "RCURL" {
+							meta["sub_type"] = "repeat"
+							meta["iterator_var"] = iterator
+							meta["times"] = repeatValue
+							ast = append(ast, map[string]interface{}{
+								"type": "logic",
+								"meta": meta,
+								"line": reLine,
+								"body": repeatLogic,
+							})
+						} else {
+							err := NewError("MalformedSyntax", reLine, fmt.Sprintf("repeat %v -> %v { \n ... %s???%s", iterator, repeatValue, Red, Reset), "This repeat loop is missing a right-standing curly brace", true, "")
+							err.Throw()
+						}
+					} else {
+						err := NewError("MalformedSyntax", reLine, fmt.Sprintf("repeat %v -> %v %s???%s \n ... }", iterator, repeatValue, Red, Reset), "This repeat loop is missing a left-standing curly brace", true, "")
+						err.Throw()
+					}
 				}
 			}
 		} else if token.Type == "IDENTIFIER" {

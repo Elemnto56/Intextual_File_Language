@@ -460,6 +460,16 @@ func reRunValidator(nodes []map[string]interface{}) {
 				}
 
 				reRunValidator(captureAST)
+			case "repeat":
+				body := node["body"].([]interface{})
+
+				captureAST := []map[string]interface{}{}
+
+				for _, element := range body {
+					captureAST = append(captureAST, element.(map[string]interface{}))
+				}
+
+				reRunValidator(captureAST)
 			}
 		case "expr":
 			meta := node["meta"].(map[string]interface{})

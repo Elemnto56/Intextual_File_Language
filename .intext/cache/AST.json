@@ -1,11 +1,31 @@
 [
   {
+    "body": [
+      {
+        "line": 2,
+        "meta": {
+          "print_type": "simple",
+          "raw_type": "STRING"
+        },
+        "type": "output",
+        "value": "Hello"
+      },
+      {
+        "line": 3,
+        "meta": {
+          "print_type": "simple",
+          "raw_type": "IDENTIFIER"
+        },
+        "type": "output",
+        "value": "i"
+      }
+    ],
     "line": 1,
     "meta": {
-      "print_type": "simple",
-      "raw_type": "STRING"
+      "iterator_var": "i",
+      "sub_type": "repeat",
+      "times": "2"
     },
-    "type": "output",
-    "value": "Hello World"
+    "type": "logic"
   }
 ]

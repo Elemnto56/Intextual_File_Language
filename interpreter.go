@@ -279,6 +279,28 @@ func Interpreter() {
 					logic, _ = strconv.ParseBool(strings.TrimSpace(fmt.Sprint(rawLogic)))
 					reRunInterpreter(whileCapture)
 				}
+			case "repeat":
+				rawItr := meta["iterator_var"]
+				itr := fmt.Sprint(rawItr)
+
+				rawTimes := fmt.Sprint(meta["times"])
+				rawTimesTwo, _ := expr.Eval(rawTimes, InterpreterVariables) // Incase math is present
+				times, err := strconv.Atoi(fmt.Sprint(rawTimesTwo))
+				Check(err)
+
+				body := node["body"].([]interface{})
+				repeatCapture := []map[string]interface{}{}
+
+				for _, element := range body {
+					repeatCapture = append(repeatCapture, element.(map[string]interface{}))
+				}
+
+				if rawItr != nil {
+					for i := 0; i < times; i++ {
+						InterpreterVariables[itr] = i
+						reRunInterpreter(repeatCapture)
+					}
+				}
 			}
 		case "expr":
 			meta := node["meta"].(map[string]interface{})
@@ -525,7 +547,6 @@ func reRunInterpreter(nodes []map[string]interface{}) {
 
 		case "logic":
 			meta := node["meta"].(map[string]interface{})
-
 			switch meta["sub_type"] {
 			case "if":
 				captureIf := []map[string]interface{}{}
@@ -580,6 +601,29 @@ func reRunInterpreter(nodes []map[string]interface{}) {
 
 					for logic { // Runs logic
 						reRunInterpreter(whileCapture)
+					}
+				}
+			case "repeat":
+				rawItr := meta["iterator_var"]
+				itr := fmt.Sprint(rawItr)
+
+				rawTimes := fmt.Sprint(meta["times"])
+				rawTimesTwo, _ := expr.Eval(rawTimes, InterpreterVariables) // Incase math is present
+				times, err := strconv.Atoi(fmt.Sprint(rawTimesTwo))
+				fmt.Println(rawTimes, rawTimesTwo, times)
+				Check(err)
+
+				body := node["body"].([]interface{})
+				repeatCapture := []map[string]interface{}{}
+
+				for _, element := range body {
+					repeatCapture = append(repeatCapture, element.(map[string]interface{}))
+				}
+
+				if rawItr != nil {
+					for i := 0; i < times; i++ {
+						InterpreterVariables[itr] = i
+						reRunInterpreter(repeatCapture)
 					}
 				}
 			}

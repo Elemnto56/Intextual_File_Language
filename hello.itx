@@ -1,0 +1,4 @@
+repeat i -> 2 {
+    output "Hello"
+    output i
+}

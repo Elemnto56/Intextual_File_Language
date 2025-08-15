@@ -73,6 +73,17 @@ func Lexer(filename string) {
 				continue // Adding these so the loop continues; it'll get stuck here not knowing what to do
 			}
 
+			// Check for arrow(s)
+			if i+1 < len(line) && string(line[i:i+2]) == "->" {
+				allTokens = append(allTokens, map[string]interface{}{
+					"TYPE": "ARROW",
+					"VAL":  string(line[i : i+2]),
+					"LINE": index + 1,
+				})
+				i += 1
+				continue
+			}
+
 			// Checks for math operators
 			if i+1 < len(line) && Contains([]interface{}{">=", "<=", "==", "+=", "*=", "-=", "/="}, string(line[i:i+2])) {
 				allTokens = append(allTokens, map[string]interface{}{
@@ -160,7 +171,7 @@ func Lexer(filename string) {
 						"VAL":  temp,
 						"LINE": index + 1,
 					})
-				} else if Contains([]interface{}{"repeat", "while"}, temp) {
+				} else if Contains([]interface{}{"while", "repeat"}, temp) {
 					var rawLogicCatch string
 
 					for tempI := 0; tempI < len(line) && string(line[i]) != "{"; {
@@ -358,7 +369,7 @@ func Lexer(filename string) {
 
 			number:
 				for i < len(line) && (unicode.IsDigit(char) || char == '.') {
-					if i+1 < len(line) && Contains([]interface{}{")", "]", ","}, string(line[i+1])) {
+					if i+1 < len(line) && Contains([]interface{}{")", "]", ",", "{"}, string(line[i+1])) {
 						num += string(line[i])
 						break number
 
