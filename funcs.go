@@ -10,38 +10,38 @@ import (
 
 func ReRunParser(tokens []Tokens) []map[string]interface{} {
 	ast := []map[string]interface{}{}
-	index := 0
+	i := 0
 
-	for index < len(tokens) {
-		token := current(&index, tokens)
+	for i < len(tokens) {
+		token := current(&i, tokens)
 
 		if token.Type == "KEYWORD" {
 			switch token.Val {
 			case "let", "declare":
 				meta := make(map[string]interface{})
 				grandType := token.Val
-				advance(&index)
-				token := current(&index, tokens)
+				advance(&i)
+				token := current(&i, tokens)
 				if token.Type == "IDENTIFIER" {
 					name := token.Val
-					advance(&index)
-					token := current(&index, tokens)
+					advance(&i)
+					token := current(&i, tokens)
 					if token.Type == "SYMBOL" && token.Val == ":" {
-						advance(&index)
-						token := current(&index, tokens)
+						advance(&i)
+						token := current(&i, tokens)
 						if token.Type == "TYPESYS" && Contains([]interface{}{"bool", "string", "int", "char", "float", "ord", "order"}, fmt.Sprint(token.Val)) {
 							Type := token.Val
-							advance(&index)
-							token := current(&index, tokens)
+							advance(&i)
+							token := current(&i, tokens)
 							if token.Type == "OPERATOR" && token.Val == "=" {
-								advance(&index)
-								token := current(&index, tokens)
+								advance(&i)
+								token := current(&i, tokens)
 								if Contains([]interface{}{"INT", "BOOL", "STRING", "CHAR", "ORD", "IDENTIFIER", "TXT BLK"}, token.Type) {
 									value := token.Val
 									_type := token.Type
 									meta["raw_type"] = _type
 
-									temp := index + 1 // Did this in order for it to be a sight into the future
+									temp := i + 1 // Did this in order for it to be a sight into the future
 									if token.Meta["assignment"] == "math" {
 										meta["math"] = true
 
@@ -53,9 +53,9 @@ func ReRunParser(tokens []Tokens) []map[string]interface{} {
 											"line":      token.Line,
 											"meta":      meta,
 										})
-										advance(&index)
+										advance(&i)
 									} else if current(&temp, tokens).Type == "SYMBOL" && current(&temp, tokens).Val == ";" {
-										advance(&index)
+										advance(&i)
 										meta["math"] = false
 										ast = append(ast, map[string]interface{}{
 											"type":      grandType,
@@ -66,9 +66,9 @@ func ReRunParser(tokens []Tokens) []map[string]interface{} {
 											"meta":      meta,
 										})
 									} else if (current(&temp, tokens).Type == "OPERATOR" && current(&temp, tokens).Val == "+") || (current(&temp, tokens).Type == "SYMBOL" && current(&temp, tokens).Val == ",") {
-										first := current(&index, tokens).Val
-										advance(&index)
-										token := current(&index, tokens)
+										first := current(&i, tokens).Val
+										advance(&i)
+										token := current(&i, tokens)
 										concatCatch := []interface{}{}
 
 										concatCatch = append(concatCatch, fmt.Sprint(first))
@@ -79,14 +79,14 @@ func ReRunParser(tokens []Tokens) []map[string]interface{} {
 											}
 
 											if (token.Type == "SYMBOL" && token.Val == ",") || (token.Type == "OPERATOR" && token.Val == "+") {
-												advance(&index)
-												token = current(&index, tokens)
+												advance(&i)
+												token = current(&i, tokens)
 												continue
 											}
 
 											concatCatch = append(concatCatch, fmt.Sprint(token.Val))
-											advance(&index)
-											token = current(&index, tokens)
+											advance(&i)
+											token = current(&i, tokens)
 										}
 
 										if token.Type == "SYMBOL" && token.Val == ";" {
@@ -105,22 +105,22 @@ func ReRunParser(tokens []Tokens) []map[string]interface{} {
 										err.Throw()
 									}
 								} else if token.Type == "LBRACKET" {
-									advance(&index)
-									token := current(&index, tokens)
+									advance(&i)
+									token := current(&i, tokens)
 									userList := []interface{}{} // Make list for order
 
 									userList = append(userList, token.Val) // Put in current token
 									VarRef := make(map[string]interface{})
 
 									var tempIndex int = 0
-									advance(&index)
+									advance(&i)
 									for {
-										token = current(&index, tokens)
+										token = current(&i, tokens)
 
 										if Contains([]interface{}{"STRING", "INT", "BOOL", "FLOAT", "CHAR"}, token.Type) {
 											userList = append(userList, token.Val)
 											tempIndex += 1
-											advance(&index)
+											advance(&i)
 											continue
 										}
 
@@ -128,12 +128,12 @@ func ReRunParser(tokens []Tokens) []map[string]interface{} {
 											userList = append(userList, token.Val)
 											tempIndex += 1
 											VarRef[fmt.Sprint(token.Val)] = tempIndex
-											advance(&index)
+											advance(&i)
 											continue
 										}
 
 										if token.Type == "COMMA" {
-											advance(&index)
+											advance(&i)
 											continue
 										}
 
@@ -154,20 +154,20 @@ func ReRunParser(tokens []Tokens) []map[string]interface{} {
 											"line":      token.Line,
 											"meta":      meta,
 										})
-										advance(&index)
+										advance(&i)
 									}
 								} else if token.Type == "FUNC" {
 									switch token.Val {
 									case "read":
 										if Type == "string" {
-											advance(&index)
-											token := current(&index, tokens)
+											advance(&i)
+											token := current(&i, tokens)
 											if token.Type == "PARA" {
-												advance(&index)
-												token = current(&index, tokens)
+												advance(&i)
+												token = current(&i, tokens)
 												file := token.Val // Grab the file trying to read
-												advance(&index)
-												token = current(&index, tokens)
+												advance(&i)
+												token = current(&i, tokens)
 												if token.Type == "PARA" {
 													meta["raw_type"] = "FUNC"
 													meta["math"] = false
@@ -179,7 +179,7 @@ func ReRunParser(tokens []Tokens) []map[string]interface{} {
 														"line":      token.Line,
 														"meta":      meta,
 													})
-													advance(&index)
+													advance(&i)
 												} else {
 													err := NewError("MalformedSyntax", token.Line, fmt.Sprintf("%v %v: %v = %sread(...%s;", grandType, name, Type, Red, Reset), "The following read function was not properly closed", true, "Add a paranthesis after the string that calls the file (e.g. read(...))")
 													err.Throw()
@@ -198,9 +198,9 @@ func ReRunParser(tokens []Tokens) []map[string]interface{} {
 									meta["math"] = true
 									meta["raw_type"] = "none"
 
-									temp := index + 1
+									temp := i + 1
 									if current(&temp, tokens).Type == "SYMBOL" && current(&temp, tokens).Val == ";" {
-										advance(&index)
+										advance(&i)
 										ast = append(ast, map[string]interface{}{
 											"type":      grandType,
 											"var_type":  Type,
@@ -228,14 +228,14 @@ func ReRunParser(tokens []Tokens) []map[string]interface{} {
 					}
 				}
 			case "output":
-				advance(&index)
-				token := current(&index, tokens)
+				advance(&i)
+				token := current(&i, tokens)
 				if true { // Added this here because the value is ambiguous
 					meta := make(map[string]string)
 					_type := token.Type
 					val := token.Val
 
-					temp := index + 1
+					temp := i + 1
 					if current(&temp, tokens).Type == "SYMBOL" && current(&temp, tokens).Val == ";" {
 						switch token.Type {
 						case "STRING", "INT", "BOOL", "FLOAT", "ORD", "CHAR", "IDENTIFIER":
@@ -247,7 +247,7 @@ func ReRunParser(tokens []Tokens) []map[string]interface{} {
 								"meta":  meta,
 								"line":  token.Line,
 							})
-							advance(&index)
+							advance(&i)
 						case "MATH":
 							meta["print_type"] = "mathematics"
 							meta["raw_type"] = "none"
@@ -257,30 +257,30 @@ func ReRunParser(tokens []Tokens) []map[string]interface{} {
 								"meta":  meta,
 								"line":  token.Line,
 							})
-							advance(&index)
+							advance(&i)
 						}
 					} else if (current(&temp, tokens).Type == "SYMBOL" || current(&temp, tokens).Type == "COMMA") && current(&temp, tokens).Val == "," {
 						spagList := []interface{}{}
 						spagList = append(spagList, val) // Add the first val into the list; none left behind!
-						advance(&index)
+						advance(&i)
 
 						for {
-							newVal := current(&index, tokens)
-							var i int = index + 1
+							newVal := current(&i, tokens)
+							var i int = i + 1
 
 							if (newVal.Type == "SYMBOL" || newVal.Type == "COMMA") && newVal.Val == "," {
-								advance(&index)
+								advance(&i)
 								continue
 							}
 
 							spagList = append(spagList, interface{}(newVal.Val))
-							advance(&index)
+							advance(&i)
 
 							if current(&i, tokens).Type == "SYMBOL" && current(&i, tokens).Val == ";" {
 								break
 							}
 						}
-						token := current(&index, tokens)
+						token := current(&i, tokens)
 						if (token.Type == "SYMBOL" || token.Type == "COMMA") && token.Val == ";" {
 							meta["print_type"] = "mixed"
 							meta["raw_type"] = "none"
@@ -290,7 +290,7 @@ func ReRunParser(tokens []Tokens) []map[string]interface{} {
 								"meta":  meta,
 								"line":  token.Line,
 							})
-							advance(&index)
+							advance(&i)
 						} else {
 							err := NewError("MissingBreaker", token.Line, fmt.Sprintf("output %v <-", val), "Missing semicolon", true, "")
 							err.Throw()
@@ -306,24 +306,24 @@ func ReRunParser(tokens []Tokens) []map[string]interface{} {
 			switch token.Val {
 			case "write":
 				meta := make(map[string]interface{})
-				advance(&index)
-				token := current(&index, tokens)
+				advance(&i)
+				token := current(&i, tokens)
 				if token.Type == "PARA" && token.Val == "(" {
-					advance(&index)
-					token = current(&index, tokens)
+					advance(&i)
+					token = current(&i, tokens)
 					if token.Type == "STRING" {
 						targetFile := token.Val
-						advance(&index)
-						token = current(&index, tokens)
+						advance(&i)
+						token = current(&i, tokens)
 						if token.Type == "SYMBOL" && token.Val == "," {
-							advance(&index)
-							token = current(&index, tokens)
+							advance(&i)
+							token = current(&i, tokens)
 							if token.Type == "IDENTIFIER" {
 								wrVar := token.Val
-								advance(&index)
-								token = current(&index, tokens)
+								advance(&i)
+								token = current(&i, tokens)
 								if token.Type == "PARA" && token.Val == ")" {
-									advance(&index)
+									advance(&i)
 									meta["target"] = targetFile
 									meta["input"] = wrVar
 									meta["perms"] = 666
@@ -334,12 +334,12 @@ func ReRunParser(tokens []Tokens) []map[string]interface{} {
 										"meta": meta,
 									})
 								} else if token.Type == "SYMBOL" && token.Val == "," {
-									advance(&index)
-									token = current(&index, tokens)
+									advance(&i)
+									token = current(&i, tokens)
 									if token.Type == "INT" {
 										perms := token.Val
-										advance(&index)
-										token = current(&index, tokens)
+										advance(&i)
+										token = current(&i, tokens)
 										if token.Type == "PARA" && token.Val == ")" {
 											meta["target"] = targetFile
 											meta["input"] = wrVar
@@ -378,24 +378,24 @@ func ReRunParser(tokens []Tokens) []map[string]interface{} {
 
 			case "append":
 				meta := make(map[string]interface{})
-				advance(&index)
-				token := current(&index, tokens)
+				advance(&i)
+				token := current(&i, tokens)
 				if token.Type == "PARA" && token.Val == "(" {
-					advance(&index)
-					token = current(&index, tokens)
+					advance(&i)
+					token = current(&i, tokens)
 					if token.Type == "STRING" {
 						target := token.Val
-						advance(&index)
-						token = current(&index, tokens)
+						advance(&i)
+						token = current(&i, tokens)
 						if token.Type == "SYMBOL" && token.Val == "," {
-							advance(&index)
-							token = current(&index, tokens)
+							advance(&i)
+							token = current(&i, tokens)
 							if token.Type == "IDENTIFIER" {
 								input := token.Val
-								advance(&index)
-								token = current(&index, tokens)
+								advance(&i)
+								token = current(&i, tokens)
 								if token.Type == "PARA" && token.Val == ")" {
-									advance(&index)
+									advance(&i)
 									meta["perms"] = 0
 									meta["input"] = input
 									meta["target"] = target
@@ -428,19 +428,19 @@ func ReRunParser(tokens []Tokens) []map[string]interface{} {
 			case "del", "remove":
 				meta := make(map[string]interface{})
 				grandType := token.Val
-				advance(&index)
-				token := current(&index, tokens)
+				advance(&i)
+				token := current(&i, tokens)
 				if token.Type == "PARA" && token.Val == "(" {
-					advance(&index)
-					token = current(&index, tokens)
+					advance(&i)
+					token = current(&i, tokens)
 					if token.Type == "STRING" || token.Type == "IDENTIFIER" {
 						meta["raw"] = token.Type
 						targetFile := token.Val
-						advance(&index)
-						token = current(&index, tokens)
+						advance(&i)
+						token = current(&i, tokens)
 						if token.Type == "PARA" && token.Val == ")" {
 							meta["target"] = targetFile
-							advance(&index)
+							advance(&i)
 							ast = append(ast, map[string]interface{}{
 								"type": "function",
 								"line": token.Line,
@@ -474,11 +474,11 @@ func ReRunParser(tokens []Tokens) []map[string]interface{} {
 
 				ifLine := token.Line
 
-				advance(&index)
-				token := current(&index, tokens)
+				advance(&i)
+				token := current(&i, tokens)
 				if token.Type == "LCURL" {
-					advance(&index)
-					token = current(&index, tokens)
+					advance(&i)
+					token = current(&i, tokens)
 
 					// Capturing loop starts
 					capture := []Tokens{}
@@ -489,8 +489,8 @@ func ReRunParser(tokens []Tokens) []map[string]interface{} {
 							break
 						}
 
-						advance(&index)
-						token = current(&index, tokens)
+						advance(&i)
+						token = current(&i, tokens)
 						capture = append(capture, token)
 					}
 
@@ -517,30 +517,30 @@ func ReRunParser(tokens []Tokens) []map[string]interface{} {
 				condition := token.Val
 				whileLine := token.Line
 
-				advance(&index)
-				token := current(&index, tokens)
+				advance(&i)
+				token := current(&i, tokens)
 
 				if token.Type == "LCURL" {
-					advance(&index)
-					token = current(&index, tokens)
+					advance(&i)
+					token = current(&i, tokens)
 
 					capture := []Tokens{}
 					capture = append(capture, token)
 
 					for {
-						if temp := index + 1; current(&temp, tokens).Type == "RCURL" {
+						if temp := i + 1; current(&temp, tokens).Type == "RCURL" {
 							break
 						}
 
-						advance(&index)
-						token = current(&index, tokens)
+						advance(&i)
+						token = current(&i, tokens)
 						capture = append(capture, token)
 					}
 
 					logicAST := ReRunParser(capture)
 
-					advance(&index)
-					token = current(&index, tokens)
+					advance(&i)
+					token = current(&i, tokens)
 					if token.Type == "RCURL" {
 						meta["sub_type"] = "while"
 						ast = append(ast, map[string]interface{}{
@@ -558,31 +558,162 @@ func ReRunParser(tokens []Tokens) []map[string]interface{} {
 					err := NewError("MalformedSyntax", whileLine, fmt.Sprintf("while %v %s???%s \n ... }", condition, Red, Reset), "This while loop is missing a left-standing curly brace", true, "")
 					err.Throw()
 				}
+			case "repeat":
+				cond := fmt.Sprint(token.Val)
+				reLine := token.Line
+
+				if cmpRegEx(cond, `([A-Za-z]|\_|\d+)+\s->\s\(?.+\)?`) {
+					findDash := strings.IndexRune(cond, '-')
+					iterator := strings.TrimSpace(cond[:findDash])
+
+					findGTT := strings.IndexRune(cond, '>')
+					repeatValue := strings.TrimSpace(cond[1+findGTT:])
+
+					advance(&i)
+					token := current(&i, tokens)
+
+					if token.Type == "LCURL" {
+						advance(&i)
+						token = current(&i, tokens)
+
+						// Capturing loop starts
+						repeatCapture := []Tokens{}
+						repeatCapture = append(repeatCapture, token) // put in current token
+						depth := 0
+
+						for {
+							if current(&i, tokens).Type == "LCURL" {
+								depth++
+							}
+
+							if current(&i, tokens).Type == "RCURL" {
+								depth--
+							}
+
+							if depth == 0 && current(&i, tokens).Type == "RCURL" {
+								break
+							}
+
+							advance(&i)
+							token = current(&i, tokens)
+							repeatCapture = append(repeatCapture, token)
+						}
+
+						repeatLogic := ReRunParser(repeatCapture)
+
+						advance(&i)
+						token = current(&i, tokens)
+
+						if token.Type == "RCURL" {
+							meta["sub_type"] = "repeat"
+							meta["iterator_var"] = iterator
+							meta["times"] = repeatValue
+							ast = append(ast, map[string]interface{}{
+								"type": "logic",
+								"meta": meta,
+								"line": reLine,
+								"body": repeatLogic,
+							})
+						} else {
+							err := NewError("MalformedSyntax", reLine, fmt.Sprintf("repeat %v -> %v { \n ... %s???%s", iterator, repeatValue, Red, Reset), "This repeat loop is missing a right-standing curly brace", true, "")
+							err.Throw()
+						}
+					} else {
+						err := NewError("MalformedSyntax", reLine, fmt.Sprintf("repeat %v -> %v %s???%s \n ... }", iterator, repeatValue, Red, Reset), "This repeat loop is missing a left-standing curly brace", true, "")
+						err.Throw()
+					}
+				} else if cmpRegEx(cond, `\(?\d+\)?`) {
+					advance(&i)
+					token := current(&i, tokens)
+
+					if token.Type == "LCURL" {
+						advance(&i)
+						token = current(&i, tokens)
+
+						// Capturing loop starts
+						repeatCapture := []Tokens{}
+						repeatCapture = append(repeatCapture, token) // put in current token
+						depth := 0
+
+						for i+1 < len(tokens) {
+
+							if current(&i, tokens).Type == "LCURL" {
+								depth++
+							}
+
+							if current(&i, tokens).Type == "RCURL" {
+								depth--
+							}
+
+							if tmp := i - 2; depth == 0 && current(&tmp, tokens).Type == "RCURL" {
+
+								break
+							}
+
+							advance(&i)
+							token = current(&i, tokens)
+							repeatCapture = append(repeatCapture, token)
+						}
+
+						repeatLogic := ReRunParser(repeatCapture)
+						if token.Type == "RCURL" {
+							meta["sub_type"] = "repeat"
+							meta["iterator_var"] = nil
+							meta["times"] = cond
+							ast = append(ast, map[string]interface{}{
+								"type": "logic",
+								"meta": meta,
+								"line": reLine,
+								"body": repeatLogic,
+							})
+						} else {
+							err := NewError("MalformedSyntax", reLine, fmt.Sprintf("repeat %v { \n ... %s???%s", cond, Red, Reset), "This repeat loop is missing a right-standing curly brace", true, "")
+							err.Throw()
+						}
+					} else {
+						err := NewError("MalformedSyntax", reLine, fmt.Sprintf("repeat %v %s???%s \n ... }", cond, Red, Reset), "This repeat loop is missing a left-standing curly brace", true, "")
+						err.Throw()
+					}
+				}
 			}
 		} else if token.Type == "IDENTIFIER" {
 			meta := make(map[string]interface{})
 
 			exprVal := token.Val
 
-			advance(&index)
-			token := current(&index, tokens)
+			if exprVal == "stop" || exprVal == "break" {
+				ast = append(ast, map[string]interface{}{
+					"statement": "break",
+					"line":      token.Line,
+				})
+			}
+
+			if exprVal == "skip" || exprVal == "continue" {
+				ast = append(ast, map[string]interface{}{
+					"statement": "continue",
+					"line":      token.Line,
+				})
+			}
+
+			advance(&i)
+			token := current(&i, tokens)
 
 			if token.Type == "OPERATOR" {
 				switch token.Val {
 				case "=":
-					advance(&index)
-					token = current(&index, tokens)
+					advance(&i)
+					token = current(&i, tokens)
 
 				case "+=", "*=", "-=", "/=":
 					incrType := token.Val
 
-					advance(&index)
-					token = current(&index, tokens)
+					advance(&i)
+					token = current(&i, tokens)
 
 					incrValue := token.Val
 
-					advance(&index)
-					token = current(&index, tokens)
+					advance(&i)
+					token = current(&i, tokens)
 
 					if token.Type == "SYMBOL" && token.Val == ";" {
 						meta["incr_type"] = incrType
@@ -602,7 +733,7 @@ func ReRunParser(tokens []Tokens) []map[string]interface{} {
 			}
 		}
 
-		advance(&index)
+		advance(&i)
 	}
 
 	return ast
@@ -657,7 +788,7 @@ func ValidateVal(varType interface{}, varValue interface{}, line int, meta strin
 		}
 		return true
 	case "string":
-		if Contains([]interface{}{"STRING", "FUNC", "IDENTIFIER", "concat", "TXT BLK"}, meta) {
+		if Contains([]interface{}{"STRING", "FUNC", "concat", "TXT BLK"}, meta) {
 			return true
 		} else {
 			err2 := NewError("TypeMismatch", line, fmt.Sprintf("let x: string = %s%s%s;", Red, fmt.Sprint(varValue), Reset), "The following value was not a string", true, typemismatch)

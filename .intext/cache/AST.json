@@ -1,15 +1,24 @@
 [
   {
+    "line": 1,
+    "meta": {
+      "math": false,
+      "ord-ref": {},
+      "raw_type": "ORDER"
+    },
+    "type": "let",
+    "var_name": "x",
+    "var_type": "ord",
+    "var_value": [
+      "first",
+      "second",
+      "third",
+      "fourth",
+      "fifth"
+    ]
+  },
+  {
     "body": [
-      {
-        "line": 2,
-        "meta": {
-          "print_type": "simple",
-          "raw_type": "STRING"
-        },
-        "type": "output",
-        "value": "Hello"
-      },
       {
         "line": 3,
         "meta": {
@@ -17,14 +26,14 @@
           "raw_type": "IDENTIFIER"
         },
         "type": "output",
-        "value": "i"
+        "value": "x[1]"
       }
     ],
-    "line": 1,
+    "line": 2,
     "meta": {
-      "iterator_var": "i",
+      "iterator_var": null,
       "sub_type": "repeat",
-      "times": "2"
+      "times": "5"
     },
     "type": "logic"
   }

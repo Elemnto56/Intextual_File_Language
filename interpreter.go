@@ -16,6 +16,8 @@ var isBinary bool
 var pat2 string = `^([A-Za-z]+\_*?)+\[[0-9]+\];?$`
 var re2 *regexp.Regexp = regexp.MustCompile(pat2)
 var InterpreterVariables = make(map[string]interface{})
+var breakFlag bool = false
+var contFlag bool = false
 
 func Interpreter() {
 
@@ -237,7 +239,7 @@ func Interpreter() {
 					}
 				}
 
-				for _, node := range captureIf {
+				for range captureIf {
 
 					body := node["body"].([]interface{})
 
@@ -275,6 +277,16 @@ func Interpreter() {
 				logic, _ := strconv.ParseBool(strings.TrimSpace(fmt.Sprint(rawLogic)))
 
 				for logic { // Updates logic
+					if contFlag {
+						contFlag = false
+						break
+					}
+
+					if breakFlag {
+						breakFlag = false
+						break
+					}
+
 					rawLogic, _ = expr.Eval(cond, InterpreterVariables)
 					logic, _ = strconv.ParseBool(strings.TrimSpace(fmt.Sprint(rawLogic)))
 					reRunInterpreter(whileCapture)
@@ -298,6 +310,30 @@ func Interpreter() {
 				if rawItr != nil {
 					for i := 0; i < times; i++ {
 						InterpreterVariables[itr] = i
+
+						if contFlag {
+							contFlag = false
+							break
+						}
+
+						if breakFlag {
+							breakFlag = false
+							break
+						}
+						reRunInterpreter(repeatCapture)
+					}
+				} else if rawItr == nil {
+					for i := 0; i < times; i++ {
+						if contFlag {
+							contFlag = false
+							break
+						}
+
+						if breakFlag {
+							breakFlag = false
+							break
+						}
+
 						reRunInterpreter(repeatCapture)
 					}
 				}
@@ -353,6 +389,13 @@ func Interpreter() {
 func reRunInterpreter(nodes []map[string]interface{}) {
 	for index := 0; index < len(nodes); index++ {
 		node := nodes[index]
+
+		switch node["statement"] {
+		case "break":
+			breakFlag = true
+		case "continue":
+			contFlag = true
+		}
 
 		switch node["type"] {
 		case "let", "declare":
@@ -547,6 +590,7 @@ func reRunInterpreter(nodes []map[string]interface{}) {
 
 		case "logic":
 			meta := node["meta"].(map[string]interface{})
+
 			switch meta["sub_type"] {
 			case "if":
 				captureIf := []map[string]interface{}{}
@@ -560,9 +604,7 @@ func reRunInterpreter(nodes []map[string]interface{}) {
 						break captureLoop
 					}
 				}
-
-				for _, node := range captureIf {
-
+				for range captureIf {
 					body := node["body"].([]interface{})
 
 					cond := fmt.Sprint(node["condition"])
@@ -595,13 +637,13 @@ func reRunInterpreter(nodes []map[string]interface{}) {
 					whileCapture = append(whileCapture, element.(map[string]interface{}))
 				}
 
-				for { // Updates logic
-					rawLogic, _ := expr.Eval(cond, InterpreterVariables)
-					logic, _ := strconv.ParseBool(fmt.Sprint(rawLogic))
+				rawLogic, _ := expr.Eval(cond, InterpreterVariables)
+				logic, _ := strconv.ParseBool(strings.TrimSpace(fmt.Sprint(rawLogic)))
 
-					for logic { // Runs logic
-						reRunInterpreter(whileCapture)
-					}
+				for logic { // Updates logic
+					rawLogic, _ = expr.Eval(cond, InterpreterVariables)
+					logic, _ = strconv.ParseBool(strings.TrimSpace(fmt.Sprint(rawLogic)))
+					reRunInterpreter(whileCapture)
 				}
 			case "repeat":
 				rawItr := meta["iterator_var"]
@@ -610,7 +652,6 @@ func reRunInterpreter(nodes []map[string]interface{}) {
 				rawTimes := fmt.Sprint(meta["times"])
 				rawTimesTwo, _ := expr.Eval(rawTimes, InterpreterVariables) // Incase math is present
 				times, err := strconv.Atoi(fmt.Sprint(rawTimesTwo))
-				fmt.Println(rawTimes, rawTimesTwo, times)
 				Check(err)
 
 				body := node["body"].([]interface{})
@@ -623,6 +664,10 @@ func reRunInterpreter(nodes []map[string]interface{}) {
 				if rawItr != nil {
 					for i := 0; i < times; i++ {
 						InterpreterVariables[itr] = i
+						reRunInterpreter(repeatCapture)
+					}
+				} else if rawItr == nil {
+					for i := 0; i < times; i++ {
 						reRunInterpreter(repeatCapture)
 					}
 				}

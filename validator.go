@@ -232,6 +232,16 @@ func Validator() {
 				}
 
 				reRunValidator(captureAST)
+			case "repeat":
+				body := node["body"].([]interface{})
+
+				captureAST := []map[string]interface{}{}
+
+				for _, element := range body {
+					captureAST = append(captureAST, element.(map[string]interface{}))
+				}
+
+				reRunValidator(captureAST)
 			}
 		case "expr":
 			meta := node["meta"].(map[string]interface{})
@@ -249,7 +259,6 @@ func Validator() {
 }
 
 func reRunValidator(nodes []map[string]interface{}) {
-	// Regexs
 	pat0 := `((write|read|append|input)\((|.+)\)|declare|ouput|[\+|\-|\*|\\|\+\=|\-\=|\\\=|\*\=])`
 	pat1 := `(true|false|[0-9]|^\[|\.)`
 	re0 := regexp.MustCompile(pat0)
@@ -452,16 +461,6 @@ func reRunValidator(nodes []map[string]interface{}) {
 					fmt.Printf("%s%v%s\n", Red, NullCheck(fmt.Sprint(err), true), Reset)
 					os.Exit(1)
 				}
-
-				captureAST := []map[string]interface{}{}
-
-				for _, element := range body {
-					captureAST = append(captureAST, element.(map[string]interface{}))
-				}
-
-				reRunValidator(captureAST)
-			case "repeat":
-				body := node["body"].([]interface{})
 
 				captureAST := []map[string]interface{}{}
 

@@ -85,7 +85,7 @@ func Lexer(filename string) {
 			}
 
 			// Checks for math operators
-			if i+1 < len(line) && Contains([]interface{}{">=", "<=", "==", "+=", "*=", "-=", "/="}, string(line[i:i+2])) {
+			if i+1 < len(line) && Contains([]interface{}{">=", "<=", "==", "+=", "*=", "-=", "/=", "||", "&&"}, string(line[i:i+2])) {
 				allTokens = append(allTokens, map[string]interface{}{
 					"TYPE": "OPERATOR",
 					"VAL":  string(line[i : i+2]),
@@ -228,7 +228,7 @@ func Lexer(filename string) {
 						"LINE": index + 1,
 					})
 				} else {
-					if i+1 < len(line) && Contains([]interface{}{"+ ", "- ", "* ", "/ "}, string(line[i+1])) {
+					if i+1 < len(line) && Contains([]interface{}{"+", "+ ", "-", "- ", "*", "* ", "/", "/ "}, string(line[i+1])) {
 						var mathCap string
 						mathCap += string(char)
 
