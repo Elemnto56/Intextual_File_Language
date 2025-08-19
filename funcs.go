@@ -247,7 +247,6 @@ func ReRunParser(tokens []Tokens) []map[string]interface{} {
 								"meta":  meta,
 								"line":  token.Line,
 							})
-							advance(&i)
 						case "MATH":
 							meta["print_type"] = "mathematics"
 							meta["raw_type"] = "none"
@@ -257,7 +256,6 @@ func ReRunParser(tokens []Tokens) []map[string]interface{} {
 								"meta":  meta,
 								"line":  token.Line,
 							})
-							advance(&i)
 						}
 					} else if (current(&temp, tokens).Type == "SYMBOL" || current(&temp, tokens).Type == "COMMA") && current(&temp, tokens).Val == "," {
 						spagList := []interface{}{}
@@ -266,7 +264,6 @@ func ReRunParser(tokens []Tokens) []map[string]interface{} {
 
 						for {
 							newVal := current(&i, tokens)
-							var i int = i + 1
 
 							if (newVal.Type == "SYMBOL" || newVal.Type == "COMMA") && newVal.Val == "," {
 								advance(&i)
@@ -280,6 +277,7 @@ func ReRunParser(tokens []Tokens) []map[string]interface{} {
 								break
 							}
 						}
+
 						token := current(&i, tokens)
 						if (token.Type == "SYMBOL" || token.Type == "COMMA") && token.Val == ";" {
 							meta["print_type"] = "mixed"
@@ -290,7 +288,6 @@ func ReRunParser(tokens []Tokens) []map[string]interface{} {
 								"meta":  meta,
 								"line":  token.Line,
 							})
-							advance(&i)
 						} else {
 							err := NewError("MissingBreaker", token.Line, fmt.Sprintf("output %v <-", val), "Missing semicolon", true, "")
 							err.Throw()
@@ -463,7 +460,6 @@ func ReRunParser(tokens []Tokens) []map[string]interface{} {
 
 		} else if token.Type == "LOGIC" {
 			meta := make(map[string]interface{})
-
 			switch token.SubType {
 			case "if":
 				condition := token.Val
@@ -767,7 +763,7 @@ func NullCheck(val interface{}, stringCheck bool) string {
 	} else if stringCheck {
 		v := fmt.Sprint(val)
 
-		NewString := strings.Replace(v, "<nil>", "null", -1)
+		NewString := strings.Replace(v, "<nil>", "\033[0;35mnull\033[0m", -1)
 		return NewString
 	}
 

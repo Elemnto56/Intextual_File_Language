@@ -3,7 +3,7 @@ module intext
 go 1.24.5
 
 require (
-	github.com/expr-lang/expr v1.17.5
+	github.com/expr-lang/expr v1.17.6
 	github.com/spf13/cobra v1.9.1
 )
 

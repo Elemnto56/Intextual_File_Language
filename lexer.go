@@ -29,7 +29,7 @@ func Contains(slice []interface{}, look interface{}) bool {
 
 func Lexer(filename string) {
 
-	pat2 := `([A-Za-z]+\_*?)+\[[0-9]+\];?`
+	pat2 := `([A-Za-z]+\_*?)+\[([0-9]+|\w+)\];?`
 	re2 := regexp.MustCompile(pat2)
 
 	file, err := os.Open(filename)
@@ -228,32 +228,11 @@ func Lexer(filename string) {
 						"LINE": index + 1,
 					})
 				} else {
-					if i+1 < len(line) && Contains([]interface{}{"+", "+ ", "-", "- ", "*", "* ", "/", "/ "}, string(line[i+1])) {
-						var mathCap string
-						mathCap += string(char)
-
-						for i < len(line) && (unicode.IsDigit(rune(line[i])) || string(line[i]) == "." || Contains([]interface{}{"+", "-", "/", "*", " "}, string(line[i]))) {
-							mathCap += string(line[i])
-							i += 1
-						}
-
-						finalMath := strings.TrimSpace(mathCap)
-
-						allTokens = append(allTokens, map[string]interface{}{
-							"TYPE": "IDENTIFIER",
-							"META": map[string]string{
-								"assignment": "math",
-							},
-							"VAL":  finalMath,
-							"LINE": index + 1,
-						})
-					} else {
-						allTokens = append(allTokens, map[string]interface{}{
-							"TYPE": "IDENTIFIER",
-							"VAL":  temp,
-							"LINE": index + 1,
-						})
-					}
+					allTokens = append(allTokens, map[string]interface{}{
+						"TYPE": "IDENTIFIER",
+						"VAL":  temp,
+						"LINE": index + 1,
+					})
 				}
 				i -= 1
 				continue

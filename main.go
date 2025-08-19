@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"os"
 
+	"github.com/expr-lang/expr"
 	"github.com/spf13/cobra"
 )
 
@@ -53,9 +55,14 @@ func main() {
 		Use:   "test",
 		Short: "Test stuff",
 		Run: func(cmd *cobra.Command, args []string) {
-			for i := 0; i < 5; i++ {
-				fmt.Println("Test")
+			val, err := expr.Eval("i == 2", map[string]interface{}{
+				"i": 0,
+			})
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
 			}
+			fmt.Println(val)
 		},
 	}
 

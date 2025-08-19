@@ -1,4 +1,0 @@
-let x: ord = ["first", "second", "third", "fourth", "fifth"]
-repeat i -> 5 { 
-    output x[i]
-}

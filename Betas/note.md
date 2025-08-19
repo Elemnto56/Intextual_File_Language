@@ -1,1 +1,0 @@
-If you plan to install one of these binaries, do note that they are unstable. These are made after each commit to Intext, regardless if they're a release candidate.

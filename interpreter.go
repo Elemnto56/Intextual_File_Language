@@ -13,7 +13,7 @@ import (
 
 // Globals
 var isBinary bool
-var pat2 string = `^([A-Za-z]+\_*?)+\[[0-9]+\];?$`
+var pat2 string = `^([A-Za-z]+\_*?)+\[([0-9]+|\w)\];?$`
 var re2 *regexp.Regexp = regexp.MustCompile(pat2)
 var InterpreterVariables = make(map[string]interface{})
 var breakFlag bool = false
@@ -143,17 +143,17 @@ func Interpreter() {
 				var catch string
 
 				for _, SpagVal := range value.([]interface{}) {
-					switch SpagVal.(type) {
+					switch SpagVal := SpagVal.(type) {
 					case string:
-						vari, ok := InterpreterVariables[SpagVal.(string)]
+						vari, ok := InterpreterVariables[SpagVal]
 						if ok {
 							SpagList = append(SpagList, vari)
 						} else {
-							if re2.MatchString(SpagVal.(string)) {
-								val, _ := expr.Eval(SpagVal.(string), InterpreterVariables)
+							if re2.MatchString(SpagVal) {
+								val, _ := expr.Eval(SpagVal, InterpreterVariables)
 								SpagList = append(SpagList, NullCheck(val, false))
 							} else {
-								SpagList = append(SpagList, vari)
+								SpagList = append(SpagList, SpagVal)
 							}
 						}
 					default:
@@ -227,41 +227,21 @@ func Interpreter() {
 
 			switch meta["sub_type"] {
 			case "if":
-				captureIf := []map[string]interface{}{}
+				body := node["body"].([]interface{})
 
-			captureLoop:
-				for i, element := range nodes {
+				cond := fmt.Sprint(node["condition"])
+				val, _ := expr.Eval(cond, InterpreterVariables)
 
-					captureIf = append(captureIf, element)
+				captureAST := []map[string]interface{}{}
 
-					if i+1 < len(nodes) && nodes[i+1]["meta"].(map[string]interface{})["sub_type"] != "if" {
-						break captureLoop
-					}
+				for _, element := range body {
+					captureAST = append(captureAST, element.(map[string]interface{}))
 				}
 
-				for range captureIf {
-
-					body := node["body"].([]interface{})
-
-					cond := fmt.Sprint(node["condition"])
-					val, _ := expr.Eval(cond, InterpreterVariables)
-
-					captureAST := []map[string]interface{}{}
-
-					for _, element := range body {
-						captureAST = append(captureAST, element.(map[string]interface{}))
-					}
-
-					v, _ := strconv.ParseBool(fmt.Sprint(val))
-					if v == true {
-						reRunInterpreter(captureAST)
-						break
-					}
-
+				v, _ := strconv.ParseBool(fmt.Sprint(val))
+				if v == true {
+					reRunInterpreter(captureAST)
 				}
-
-				temp := &index
-				index = *temp + len(captureIf)
 
 			case "while":
 				cond := fmt.Sprint(node["condition"])
@@ -351,23 +331,47 @@ func Interpreter() {
 				rawTarget := fmt.Sprint(meta["target"])
 				target := InterpreterVariables[rawTarget]
 
-				intTarget, err := strconv.Atoi(fmt.Sprint(target))
-				if err != nil {
-					err0 := NewError("TypeMismatch", line, fmt.Sprintf("%s%v%s %v %v", Red, rawTarget, Reset, incrType, newValue), "The following variable was not an int", true, typemismatch)
-					err0.Throw()
+				var strCheck bool = false
+				var intTarget int
+				if cmpRegEx(fmt.Sprint(target), `\w+\s?`) {
+					strCheck = true
+				} else {
+					var err error
+					intTarget, err = strconv.Atoi(fmt.Sprint(target))
+					if err != nil {
+						err0 := NewError("TypeMismatch", line, fmt.Sprintf("%s%v%s %v %v", Red, rawTarget, Reset, incrType, newValue), "The following variable was not an int", true, typemismatch)
+						err0.Throw()
+
+					}
 				}
 
-				intNewVal, erra := strconv.Atoi(fmt.Sprint(newValue))
-				if erra != nil {
-					err0 := NewError("TypeMismatch", line, fmt.Sprintf("%v %v %s%v%s", rawTarget, incrType, Red, newValue, Reset), "The following value was not an int", true, typemismatch)
-					err0.Throw()
+				var intNewVal int
+				if cmpRegEx(fmt.Sprint(newValue), `\w+\s?`) {
+					strCheck = true
+				} else {
+					var erra error
+					if val, ok := InterpreterVariables[fmt.Sprint(newValue)]; ok {
+						intNewVal, _ = strconv.Atoi(fmt.Sprint(val))
+					} else {
+						intNewVal, erra = strconv.Atoi(fmt.Sprint(newValue))
+						if erra != nil {
+							err0 := NewError("TypeMismatch", line, fmt.Sprintf("%v %v %s%v%s", rawTarget, incrType, Red, newValue, Reset), "The following value was not an int", true, typemismatch)
+							err0.Throw()
+
+						}
+					}
 				}
 
 				switch incrType {
 				case "+=":
-					val, _ := expr.Eval(fmt.Sprintf("%v + %v", target, newValue), InterpreterVariables)
+					if strCheck {
+						val, _ := expr.Eval(fmt.Sprintf("\"%s\" + \"%s\"", fmt.Sprint(target), fmt.Sprint(newValue)), InterpreterVariables)
+						InterpreterVariables[rawTarget] = val
+					} else {
 
-					InterpreterVariables[rawTarget] = val
+						val, _ := expr.Eval(fmt.Sprintf("%v + %v", target, newValue), InterpreterVariables)
+						InterpreterVariables[rawTarget] = val
+					}
 				case "-=":
 					val := intTarget - intNewVal
 
@@ -499,7 +503,7 @@ func reRunInterpreter(nodes []map[string]interface{}) {
 				} else {
 					if re2.MatchString(fmt.Sprint(value)) {
 						val, _ := expr.Eval(fmt.Sprint(value), InterpreterVariables)
-						fmt.Println(val)
+						fmt.Println(NullCheck(val, true))
 					} else {
 						fmt.Println(value)
 					}
@@ -509,18 +513,16 @@ func reRunInterpreter(nodes []map[string]interface{}) {
 				var catch string
 
 				for _, SpagVal := range value.([]interface{}) {
-					switch SpagVal.(type) {
+					switch SpagVal := SpagVal.(type) {
 					case string:
-						vari, ok := InterpreterVariables[SpagVal.(string)]
+						vari, ok := InterpreterVariables[SpagVal]
 						if ok {
 							SpagList = append(SpagList, vari)
+						} else if cmpRegEx(SpagVal, `\w\[\w\]`) {
+							val, _ := expr.Eval(SpagVal, InterpreterVariables)
+							SpagList = append(SpagList, NullCheck(val, true))
 						} else {
-							if re2.MatchString(SpagVal.(string)) {
-								val, _ := expr.Eval(SpagVal.(string), InterpreterVariables)
-								SpagList = append(SpagList, NullCheck(val, false))
-							} else {
-								SpagList = append(SpagList, vari)
-							}
+							SpagList = append(SpagList, SpagVal)
 						}
 					default:
 						SpagList = append(SpagList, SpagVal)
@@ -557,7 +559,15 @@ func reRunInterpreter(nodes []map[string]interface{}) {
 			switch node["call"] {
 			case "write":
 				input := meta["input"]
-				val := InterpreterVariables[fmt.Sprint(input)]
+				var val interface{}
+				if cmpRegEx(fmt.Sprint(input), `\w\[\w\]`) {
+					val, _ = expr.Eval(fmt.Sprint(input), InterpreterVariables)
+					if val == nil {
+						val = "null"
+					}
+				} else {
+					val = InterpreterVariables[fmt.Sprint(input)]
+				}
 				target := meta["target"]
 				perms := meta["perms"]
 				octal, _ := strconv.ParseInt(fmt.Sprint(perms), 8, 64)
@@ -567,7 +577,16 @@ func reRunInterpreter(nodes []map[string]interface{}) {
 				Check(erra)
 			case "append":
 				fileTaget := meta["target"]
-				val := fmt.Sprint(InterpreterVariables[fmt.Sprint(meta["input"])])
+				input := meta["input"]
+				var val interface{}
+				if cmpRegEx(fmt.Sprint(input), `\w\[\w\]`) {
+					val, _ = expr.Eval(fmt.Sprint(input), InterpreterVariables)
+					if val == nil {
+						val = "null"
+					}
+				} else {
+					val = InterpreterVariables[fmt.Sprint(input)]
+				}
 				f, err := os.OpenFile(fmt.Sprint(fileTaget), os.O_APPEND|os.O_WRONLY, 0666)
 				if err != nil {
 					i, _ := strconv.Atoi(fmt.Sprint(meta["line"]))
@@ -575,7 +594,7 @@ func reRunInterpreter(nodes []map[string]interface{}) {
 					erra.Throw()
 				}
 				defer f.Close()
-				_, errd := f.WriteString(val)
+				_, errd := f.WriteString(fmt.Sprint(val))
 				Check(errd)
 			case "del":
 				fileTarget := fmt.Sprint(meta["target"])
@@ -593,39 +612,21 @@ func reRunInterpreter(nodes []map[string]interface{}) {
 
 			switch meta["sub_type"] {
 			case "if":
-				captureIf := []map[string]interface{}{}
+				body := node["body"].([]interface{})
 
-			captureLoop:
-				for i, element := range nodes {
+				cond := fmt.Sprint(node["condition"])
+				val, _ := expr.Eval(cond, InterpreterVariables)
 
-					captureIf = append(captureIf, element)
+				captureAST := []map[string]interface{}{}
 
-					if i+1 < len(nodes) && nodes[i+1]["meta"].(map[string]interface{})["sub_type"] != "if" {
-						break captureLoop
-					}
-				}
-				for range captureIf {
-					body := node["body"].([]interface{})
-
-					cond := fmt.Sprint(node["condition"])
-					val, _ := expr.Eval(cond, InterpreterVariables)
-
-					captureAST := []map[string]interface{}{}
-
-					for _, element := range body {
-						captureAST = append(captureAST, element.(map[string]interface{}))
-					}
-
-					v, _ := strconv.ParseBool(fmt.Sprint(val))
-					if v == true {
-						reRunInterpreter(captureAST)
-						break
-					}
-
+				for _, element := range body {
+					captureAST = append(captureAST, element.(map[string]interface{}))
 				}
 
-				temp := &index
-				index = *temp + len(captureIf)
+				v, _ := strconv.ParseBool(fmt.Sprint(val))
+				if v == true {
+					reRunInterpreter(captureAST)
+				}
 
 			case "while":
 				cond := fmt.Sprint(node["condition"])

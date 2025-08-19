@@ -266,7 +266,7 @@ func Parser() {
 					val := token.Val
 
 					temp := index + 1
-					if current(&temp, tokens).Type == "SYMBOL" || current(&temp, tokens).Type == "LBRACKET" {
+					if (current(&temp, tokens).Type == "SYMBOL" && current(&temp, tokens).Val == ";") || current(&temp, tokens).Type == "LBRACKET" {
 						switch token.Type {
 						case "STRING", "INT", "BOOL", "FLOAT", "ORD", "CHAR", "IDENTIFIER":
 							meta["raw_type"] = _type
@@ -277,7 +277,6 @@ func Parser() {
 								"meta":  meta,
 								"line":  token.Line,
 							})
-							advance(&index)
 						case "MATH":
 							meta["print_type"] = "mathematics"
 							meta["raw_type"] = "none"
@@ -287,7 +286,6 @@ func Parser() {
 								"meta":  meta,
 								"line":  token.Line,
 							})
-							advance(&index)
 						}
 					} else if (current(&temp, tokens).Type == "SYMBOL" || current(&temp, tokens).Type == "COMMA") && current(&temp, tokens).Val == "," {
 						spagList := []interface{}{}
@@ -320,7 +318,6 @@ func Parser() {
 								"meta":  meta,
 								"line":  token.Line,
 							})
-							advance(&index)
 						} else {
 							err := NewError("MissingBreaker", token.Line, fmt.Sprintf("output %v <-", val), "Missing semicolon", true, "")
 							err.Throw()
@@ -550,34 +547,33 @@ func Parser() {
 				token := current(&index, tokens)
 
 				if token.Type == "LCURL" {
-					advance(&index)
-					token = current(&index, tokens)
 
 					capture := []Tokens{}
-					capture = append(capture, token)
 					depth := 0
+					tmp := index - 1
+					token := current(&tmp, tokens)
 
 					for {
-						if current(&index, tokens).Type == "LCURL" {
+						advance(&tmp)
+						token = current(&tmp, tokens)
+
+						if token.Type == "LCURL" {
 							depth++
 						}
 
-						if current(&index, tokens).Type == "RCURL" {
+						if token.Type == "RCURL" {
 							depth--
 						}
 
-						if depth == 0 && current(&index, tokens).Type == "RCURL" {
+						if depth == 0 && token.Type == "RCURL" {
 							break
 						}
 
-						advance(&index)
-						token = current(&index, tokens)
 						capture = append(capture, token)
+
 					}
 
 					logicAST := ReRunParser(capture)
-					advance(&index)
-					token = current(&index, tokens)
 					if token.Type == "RCURL" {
 						meta["sub_type"] = "while"
 						ast = append(ast, map[string]interface{}{
@@ -618,6 +614,7 @@ func Parser() {
 
 						for {
 							if current(&index, tokens).Type == "LCURL" {
+
 								depth++
 							}
 
@@ -630,11 +627,9 @@ func Parser() {
 							}
 
 							advance(&index)
-							fmt.Println(depth)
 							token = current(&index, tokens)
 							repeatCapture = append(repeatCapture, token)
 						}
-
 						repeatLogic := ReRunParser(repeatCapture)
 
 						if token.Type == "RCURL" {
@@ -708,10 +703,6 @@ func Parser() {
 
 			if token.Type == "OPERATOR" {
 				switch token.Val {
-				case "=":
-					advance(&index)
-					token = current(&index, tokens)
-
 				case "+=", "*=", "-=", "/=":
 					incrType := token.Val
 
@@ -737,6 +728,10 @@ func Parser() {
 						err := NewError("UnknownValue", token.Line, fmt.Sprintf("%v %v %v %s<--%s", exprVal, incrType, incrValue, Red, Reset), "An unknown value or known misplaced value is in this line", true, "self-incr can only have a single value to be added to itself")
 						err.Throw()
 					}
+				case "=":
+					err := NewError("PKGError", token.Line, fmt.Sprintf("%v = ...", exprVal), "The \"expression\" pkg was not included", true, "Upgrade to v0.9!")
+					err.Throw()
+
 				}
 			}
 		}

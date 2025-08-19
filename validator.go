@@ -7,6 +7,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/expr-lang/expr"
 )
@@ -187,6 +188,9 @@ func Validator() {
 			call := node["call"]
 			switch call {
 			case "write":
+				if cmpRegEx(fmt.Sprint(meta["input"]), `\w\[\w\]`) {
+					continue
+				}
 				if _, ok := ValidatorVariables[fmt.Sprint(meta["input"])]; !ok {
 					err := NewError("VariableNotFound", inte, fmt.Sprintf("write(%v, %s%v%s);", meta["target"], Red, meta["input"], Reset), "This variable was not found", true, "")
 					err.Throw()
@@ -207,14 +211,13 @@ func Validator() {
 				}
 
 				if _, err := os.Stat(fmt.Sprint(meta["target"])); err != nil {
-					erra := NewError("FileError", inte, fmt.Sprintf("del(%s%s%s);", Red, fmt.Sprint(meta["target"]), Reset), "The following file does not exist", true, "")
+					erra := NewError("FileError", inte, fmt.Sprintf("del(%s%s%s);", Red, fmt.Sprint(meta["target"]), Reset), "The following file does not exist", true, "\033[3mMaybe you already deleted it?\033[23m")
 					erra.Throw()
 				}
 			}
 
 		case "logic":
 			meta := node["meta"].(map[string]interface{})
-
 			switch meta["sub_type"] {
 			case "if", "while":
 				cond := fmt.Sprint(node["condition"])
@@ -234,7 +237,11 @@ func Validator() {
 				reRunValidator(captureAST)
 			case "repeat":
 				body := node["body"].([]interface{})
+				itr := meta["iterator_var"]
 
+				if itr != nil {
+					ValidatorVariables[strings.TrimSpace(fmt.Sprint(itr))] = 0
+				}
 				captureAST := []map[string]interface{}{}
 
 				for _, element := range body {
@@ -391,7 +398,7 @@ func reRunValidator(nodes []map[string]interface{}) {
 			metadata := node["meta"].(map[string]interface{})
 
 			if metadata["print_type"] == "simple" {
-				if metadata["raw_type"] == "STRING" || re1.MatchString(fmt.Sprint(value)) {
+				if metadata["raw_type"] == "STRING" || re1.MatchString(fmt.Sprint(value)) || cmpRegEx(fmt.Sprint(value), `\w\[\w\]`) {
 					continue
 				} else {
 					if _, exist := ValidatorVariables[fmt.Sprint(value)]; !exist { // Catches non-strings for vars
@@ -424,6 +431,9 @@ func reRunValidator(nodes []map[string]interface{}) {
 			call := node["call"]
 			switch call {
 			case "write":
+				if cmpRegEx(fmt.Sprint(meta["input"]), `\w\[\w\]`) {
+					continue
+				}
 				if _, ok := ValidatorVariables[fmt.Sprint(meta["input"])]; !ok {
 					err := NewError("VariableNotFound", inte, fmt.Sprintf("write(%v, %s%v%s);", meta["target"], Red, meta["input"], Reset), "This variable was not found", true, "")
 					err.Throw()
@@ -433,11 +443,17 @@ func reRunValidator(nodes []map[string]interface{}) {
 					erra.Throw()
 				}
 			case "append":
+				if cmpRegEx(fmt.Sprint(meta["input"]), `\w\[\w\]`) {
+					continue
+				}
 				if _, ok := ValidatorVariables[fmt.Sprint(meta["input"])]; !ok {
 					err := NewError("VariableNotFound", inte, fmt.Sprintf("append(%v, %s%v%s);", meta["target"], Red, meta["input"], Reset), "This variable was not found", true, "")
 					err.Throw()
 				}
 			case "del":
+				if cmpRegEx(fmt.Sprint(meta["input"]), `\w\[\w\]`) {
+					continue
+				}
 				if _, ok := ValidatorVariables[fmt.Sprint(meta["target"])]; !ok && meta["raw"] == "IDENTIFIER" {
 					err := NewError("VariableNotFound", inte, fmt.Sprintf("del(%s%v%s);", Red, meta["target"], Reset), "This variable was not found", true, "")
 					err.Throw()
