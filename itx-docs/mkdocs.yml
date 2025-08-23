@@ -11,5 +11,8 @@ theme:
 plugins:
   - search
 
+nav:
+  - Playground: playground/
+
 extra_css:
   - style.css
