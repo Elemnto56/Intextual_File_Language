@@ -22,3 +22,7 @@ function Run() {
     .then(res => res.json())
     .then(response => { console.log("We have recieved: ", response.message), document.getElementById("code-output").value = response.message})
 }
+
+function Return() {
+    window.open("https://docs.codekeg.dev", '_top').focus()
+}

@@ -38,7 +38,7 @@
               const text = document.getElementById("code-input")
 
               text.addEventListener("keydown", function (e) {
-                if (e.key == "Enter") {
+                if (e.key == "Enter" && y.checked) {
                   e.preventDefault()
 
                   Run()
@@ -54,7 +54,7 @@
               const text = document.getElementById("code-input")
 
               text.addEventListener("keydown", function (e) {
-                if (e.key == "Tab") {
+                if (e.key == "Tab" && x.checked) {
                   e.preventDefault()
 
                   const start = this.selectionStart
@@ -76,6 +76,8 @@
       <label for="code-output">Output</label>
       <textarea id="code-output" class="textarea output" placeholder="Output will appear here..." readonly></textarea>
     </div>
+
+    <button onclick="Return()">Return Back to Docs?</button>
   </div>
 </body>
 </html>
