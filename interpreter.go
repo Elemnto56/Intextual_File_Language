@@ -58,6 +58,7 @@ func Interpreter() {
 					switch meta["raw_type"] {
 					case "STRING", "CHAR":
 						val := val.(string)
+
 						InterpreterVariables[name] = val
 
 					case "FUNC":

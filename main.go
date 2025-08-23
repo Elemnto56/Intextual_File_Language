@@ -2,9 +2,8 @@ package main
 
 import (
 	"fmt"
-	"os"
+	"regexp"
 
-	"github.com/expr-lang/expr"
 	"github.com/spf13/cobra"
 )
 
@@ -45,9 +44,9 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			filename := args[0]
 			Lexer(filename)
-			Parser()
-			Validator()
-			Interpreter()
+			//Parser()
+			//Validator()
+			//Interpreter()
 		},
 	}
 
@@ -55,14 +54,14 @@ func main() {
 		Use:   "test",
 		Short: "Test stuff",
 		Run: func(cmd *cobra.Command, args []string) {
-			val, err := expr.Eval("i == 2", map[string]interface{}{
-				"i": 0,
-			})
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
+			var str string = "macro (call: string), (hello: int) . name(param: string) -> string, int"
+			re := regexp.MustCompile(`((\w+)?\([^\)]*\)|[\.|\,]|\-\>\s*([a-zA-Z0-9_,\s]+))`) // `((\w+)?\([^\)]*\)|[\.|\,]|\-\>\s\w+)`gm
+
+			mat := re.FindAllString(str, -1)
+
+			for _, ele := range mat {
+				fmt.Println(ele)
 			}
-			fmt.Println(val)
 		},
 	}
 

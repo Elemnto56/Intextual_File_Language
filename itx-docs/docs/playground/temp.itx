@@ -1,0 +1,6 @@
+let x: string = "Jay"
+
+output "How are you ", x, "?"
+
+
+

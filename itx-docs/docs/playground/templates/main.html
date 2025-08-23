@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Intext Testing</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body id="bd" class="dark-mode">
+    <script type="text/javascript" src="/src/script.js"></script>
+    <button id="bt" onclick="EnableLight()">Enable Light Mode?</button>
+
+  <div class="playground-container">
+    <h1>Intext Playground</h1>
+
+    <label for="code-input">Your Code</label>
+    <div class="editor-section">
+      <div class="check-wrapper">
+        <label>
+          <input type="checkbox" id="enter-submit">
+          Enable Enter to Sumbit?
+        </label>
+        <label>
+          <input type="checkbox" id="use-tab"/>
+          Enable Tab usage?
+        </label>
+        <button id="submit" onclick="Run()">Submit Code</button>
+      </div>
+      <br>
+
+      <textarea id="code-input" class="textarea" placeholder="Write your code here..."></textarea>
+      <script type="text/javascript">
+          const x = document.getElementById("use-tab")
+          const y = document.getElementById("enter-submit")
+
+          y.addEventListener("change", function () {
+            if (y.checked) {
+              const text = document.getElementById("code-input")
+
+              text.addEventListener("keydown", function (e) {
+                if (e.key == "Enter") {
+                  e.preventDefault()
+
+                  Run()
+                }
+              })
+            } else {
+              console.log()
+            }
+          })
+
+          x.addEventListener("change", function () {
+            if (x.checked) {
+              const text = document.getElementById("code-input")
+
+              text.addEventListener("keydown", function (e) {
+                if (e.key == "Tab") {
+                  e.preventDefault()
+
+                  const start = this.selectionStart
+                  const end = this.selectionEnd
+
+                  this.value = this.value.substring(0, start) + "    " + this.value.substring(end)
+
+                  this.selectionStart = this.selectionEnd = start + 1
+                }
+              })
+            } else {
+              console.log()
+            }
+          })
+        </script>
+    </div>
+
+    <div class="output-section">
+      <label for="code-output">Output</label>
+      <textarea id="code-output" class="textarea output" placeholder="Output will appear here..." readonly></textarea>
+    </div>
+  </div>
+</body>
+</html>

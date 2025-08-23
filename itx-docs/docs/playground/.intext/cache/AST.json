@@ -1,0 +1,26 @@
+[
+  {
+    "line": 1,
+    "meta": {
+      "math": false,
+      "raw_type": "STRING"
+    },
+    "type": "let",
+    "var_name": "x",
+    "var_type": "string",
+    "var_value": "Jay"
+  },
+  {
+    "line": 3,
+    "meta": {
+      "print_type": "mixed",
+      "raw_type": "none"
+    },
+    "type": "output",
+    "value": [
+      "How are you ",
+      "x",
+      "?"
+    ]
+  }
+]

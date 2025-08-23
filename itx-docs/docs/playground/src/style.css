@@ -1,0 +1,85 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f4f4f4;
+  padding: 20px;
+  margin: 0;
+}
+
+.playground-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.editor-section,
+.output-section {
+  margin-bottom: 20px;
+}
+
+.editor-section {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.check-wrapper {
+  margin-top: 0.5rem;
+}
+
+
+.textarea {
+  width: 100%;
+  min-height: 200px;
+  padding: 12px;
+  font-family: monospace;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  resize: vertical;
+  background-color: #fff;
+}
+
+.textarea.output {
+  background-color: #f0f0f0;
+  color: #333;
+  cursor: not-allowed;
+}
+
+body.dark-mode {
+  background-color: #121212;
+  color: #f0f0f0;
+}
+
+body.dark-mode .textarea {
+  background-color: #1e1e1e;
+  color: #f0f0f0;
+  border-color: #333;
+}
+
+body.dark-mode .textarea.output {
+  background-color: #2a2a2a;
+  color: #ddd;
+}
+
+label {
+  font-family: 'Courier New', Courier, monospace;
+}
+
+#submit {
+  margin: 10px auto;
+  display: block;
+}
+
+
+label[for] {
+  display: block;
+  text-align: right;
+}
