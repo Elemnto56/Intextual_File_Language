@@ -8,7 +8,7 @@
     <pre class="cd">output "Hello World";</pre>
 
 - ### Mixed Output
-    Sometimes will be referred as "Spaghetti Output" involves multiple values in ``output``. Mixed Output is very freeform when it comes to what can or cannot be printed. However, you must use commas to seperate each value. Using something like a plus (`+`) would make ISEC think you are doing math, which would then cause an error.
+    Sometimes will be referred as "Spaghetti Output" involves multiple values in ``output``. Mixed Output is very freeform when it comes to what can or cannot be printed. However, you must use commas to seperate each value. Using something like a plus (`+`) would make ISEC *([What's ISEC?](concepts.md))* think you are doing math, which would then cause an error.
     <br>
     You are able to do math in `output`, but mixing math and Mixed Output together will cause an error.
     
@@ -45,4 +45,22 @@
     <pre>let x: string = "The world population is", 8.1, 'B';</pre>
 
 - ### Mathematics
+    Gives the value of the math you input to the variable you want. Suppose you do
+    <pre>let x: int = 4 + 2;</pre>
+    Then `x` will equal 6.
+
+    You can even incorporate other variables in the math, so something like
+    <pre>
+    let x: int = 4;
+    let y: int = 10 + x;
+    </pre>
+    Would have `y` equal 14.
+
+- ### Functions
+    You can use `let` to assign the value of functions to a variable. For example, with `read()` if you do 
+    <pre>let x: string = read("file.txt")</pre>
+    Then `x` will equal the contents of file.txt. **HOWEVER**, there are caveats. Whenever you use `read()`, or basically any function, for safety, you can only have it be assigned to a variable. It's value may not be directly outputed, or used in a concat. For example, doing 
+    <pre>output read("file.txt")</pre>
+    Is illegal, and would result in an error. What to do instead, is to assgin read to a variable, and then output. 
     
+    This is all done so ISEC can properly assess each variable, preventing huge critical errors in scripts. So for example, say you `output` a concat of `read()` and some other strings (ex: <pre>output read("file.txt"), "is my friend", '!')</pre> But then it turns out that file.txt doesn't exist! How would ISEC deal with that, without affecting output? So, this is why you must put functions in a variable first before using their value.

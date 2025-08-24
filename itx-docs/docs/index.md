@@ -10,7 +10,7 @@ I'm not one to tell you what to do, or not do, however, I can suggest that you <
 Along with that, most developers are power users, and need something to manage their files. While making endless Bash scripts isn't entirely a bad idea, Intext could complete the task quicker and easier.
 
 ## Where do I start?
-- Visit the [Getting_Started](getting-started.md) page to learn how to Install, Run, and say "Hello World" in Intext!
+- Visit the [Getting Started](getting-started.md) page to learn how to Install, Run, and say "Hello World" in Intext!
 
 ## Who made this? 
 The one and only dev, and the one currently writing this, is Elemento56 on Github. I made this with hopes that it could help others, and also as a way to cure boredom.

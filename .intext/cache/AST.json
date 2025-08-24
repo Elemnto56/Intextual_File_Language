@@ -2,25 +2,10 @@
   {
     "line": 1,
     "meta": {
-      "math": false,
+      "print_type": "simple",
       "raw_type": "STRING"
     },
-    "type": "let",
-    "var_name": "name",
-    "var_type": "string",
-    "var_value": "Jay"
-  },
-  {
-    "line": 3,
-    "meta": {
-      "print_type": "mixed",
-      "raw_type": "none"
-    },
     "type": "output",
-    "value": [
-      "Hello there ",
-      "name",
-      " how are you?"
-    ]
+    "value": "Hello!"
   }
 ]

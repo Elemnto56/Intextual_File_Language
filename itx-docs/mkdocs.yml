@@ -12,7 +12,8 @@ plugins:
   - search
 
 nav:
-  - Playground: playground/
-
-extra_css:
-  - style.css
+  - Concepts: concepts.md
+  - Getting Started: getting-started.md
+  - Keywords: keywords.md
+  - External Sites:
+    - Playground: playground/
