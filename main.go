@@ -44,9 +44,9 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			filename := args[0]
 			Lexer(filename)
-			Parser()
-			Validator()
-			Interpreter()
+			//Parser()
+			//Validator()
+			//Interpreter()
 		},
 	}
 
@@ -55,13 +55,11 @@ func main() {
 		Short: "Test stuff",
 		Run: func(cmd *cobra.Command, args []string) {
 			var str string = "macro (call: string), (hello: int) . name(param: string) -> string, int"
-			re := regexp.MustCompile(`((\w+)?\([^\)]*\)|[\.|\,]|\-\>\s*([a-zA-Z0-9_,\s]+))`) // `((\w+)?\([^\)]*\)|[\.|\,]|\-\>\s\w+)`gm
+			re := regexp.MustCompile(`(\w+)?\([^\)]*\)|[\.|\,]|\-\>\s*([a-zA-Z0-9_,\s]+)`) // `((\w+)?\([^\)]*\)|[\.|\,]|\-\>\s\w+)`gm
 
 			mat := re.FindAllString(str, -1)
 
-			for _, ele := range mat {
-				fmt.Println(ele)
-			}
+			fmt.Println(mat)
 		},
 	}
 

@@ -1,11 +1,40 @@
 [
   {
+    "body": [
+      {
+        "line": 2,
+        "meta": {
+          "print_type": "simple",
+          "raw_type": "STRING"
+        },
+        "type": "output",
+        "value": "Worked"
+      }
+    ],
+    "condition": "(2 \u003e 3)",
     "line": 1,
     "meta": {
-      "print_type": "simple",
-      "raw_type": "STRING"
+      "sub_type": "if"
     },
-    "type": "output",
-    "value": "Hello!"
+    "type": "logic"
+  },
+  {
+    "body": [
+      {
+        "line": 4,
+        "meta": {
+          "print_type": "simple",
+          "raw_type": "STRING"
+        },
+        "type": "output",
+        "value": "Did not work"
+      }
+    ],
+    "condition": true,
+    "line": 3,
+    "meta": {
+      "sub_type": "if"
+    },
+    "type": "logic"
   }
 ]

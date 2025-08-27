@@ -64,9 +64,38 @@ func Lexer(filename string) {
 			err.Throw()
 		}
 
-		if cmpRegEx(line, `macro (call: string) . name(param: string) -> string`) {
-			os.Exit(0)
-		}
+		/*
+			if strings.HasPrefix(line, "macro") {
+				re := regexp.MustCompile(`(\w+)?\([^\)]*\)|[\.|\,]|\-\>\s*([a-zA-Z0-9_,\s]+)`)
+				matches := re.FindAllString(line, -1)
+
+				callParmas := []string{}
+				callEndFlag := true
+
+				stdParams := []string{}
+				stdEndFlag := true
+
+				for _, element := range matches {
+					if element == "." {
+						callEndFlag = false
+						continue
+					}
+
+					if element == "->" || strings.HasPrefix(element, "->") {
+						stdEndFlag = false
+					}
+
+					if callEndFlag {
+						callParmas = append(callParmas, strings.TrimSpace(element))
+					}
+					if stdEndFlag {
+						stdParams = append(stdParams, strings.TrimSpace(element))
+					}
+				}
+
+				os.Exit(0)
+			}
+		*/
 
 	outer: // Label for loop
 		for i := 0; i < len(line); i++ { // NOTE: Some are place early so the others behind don't get triggered beforehand
@@ -306,22 +335,25 @@ func Lexer(filename string) {
 				index += 1
 				var toks []map[string]interface{}
 
-				fmt.Println(lines[index])
-				for lines[index] != "}" {
-					toks = reRunLexer(lines, lines[index], index+1)
-					index += 1 // TODO
+				for {
 				}
 
-				fmt.Println("Here:", toks)
-				continue
-			case "}":
 				allTokens = append(allTokens, map[string]interface{}{
-					"TYPE": "RCURL",
-					"VAL":  string(char),
+					"TYPE": "BODY",
+					"VAL":  toks,
 					"LINE": index + 1,
 				})
-
 				continue
+				/*
+					case "}":
+						allTokens = append(allTokens, map[string]interface{}{
+							"TYPE": "RCURL",
+							"VAL":  string(char),
+							"LINE": index + 1,
+						})
+
+						continue
+				*/
 			}
 
 			// Checks for strings, since they start with quotes
@@ -425,7 +457,7 @@ func Lexer(filename string) {
 	os.WriteFile("./.intext/cache/Tokens.json", b, 0666)
 }
 
-func reRunLexer(lines []string, line string, index int) []map[string]interface{} {
+func reRunLexer(line string, index int) []map[string]interface{} {
 	allTokens := []map[string]interface{}{}
 
 outer:
