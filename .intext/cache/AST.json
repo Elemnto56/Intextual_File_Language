@@ -1,25 +1,32 @@
 [
   {
-    "body": [
-      {
-        "line": 2,
-        "meta": {
-          "print_type": "simple",
-          "raw_type": "STRING"
-        },
-        "type": "output",
-        "value": "Worked"
-      }
-    ],
-    "condition": "(2 \u003e 3)",
     "line": 1,
     "meta": {
-      "sub_type": "if"
+      "math": false,
+      "raw_type": "INT"
     },
-    "type": "logic"
+    "type": "let",
+    "var_name": "x",
+    "var_type": "int",
+    "var_value": 0
   },
   {
     "body": [
+      {
+        "body": [
+          {
+            "line": 1,
+            "statement": "break"
+          }
+        ],
+        "condition": "x == 10",
+        "line": 1,
+        "meta": {
+          "UUID": 0,
+          "sub_type": "if"
+        },
+        "type": "logic"
+      },
       {
         "line": 4,
         "meta": {
@@ -27,13 +34,23 @@
           "raw_type": "STRING"
         },
         "type": "output",
-        "value": "Did not work"
+        "value": "WHat"
+      },
+      {
+        "line": 5,
+        "meta": {
+          "incr_type": "+=",
+          "new_val": 1,
+          "target": "x"
+        },
+        "sub_type": "incr",
+        "type": "expr"
       }
     ],
-    "condition": true,
+    "condition": "true",
     "line": 3,
     "meta": {
-      "sub_type": "if"
+      "sub_type": "while"
     },
     "type": "logic"
   }

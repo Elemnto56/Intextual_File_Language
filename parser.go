@@ -41,6 +41,7 @@ func Parser() {
 
 	// Iterators
 	index := 0
+	UUID := 0 // For if statements
 
 	for index < len(tokens) {
 		token := current(&index, tokens)
@@ -492,8 +493,9 @@ func Parser() {
 			meta := make(map[string]interface{})
 
 			switch token.SubType {
-			case "if":
+			case "if", "else", "or":
 				condition := token.Val
+				grandType := token.SubType
 
 				if fmt.Sprint(condition) == "" {
 					condition = true
@@ -503,40 +505,34 @@ func Parser() {
 
 				advance(&index)
 				token := current(&index, tokens)
-				if token.Type == "LCURL" {
+				if token.Type == "BODY" {
+					var toks []Tokens
+					val := token.Val.([]interface{})
+
+					b, _ := json.Marshal(val)
+					json.Unmarshal(b, &toks)
+
+					astBody := ReRunParser(toks)
+
 					advance(&index)
-					token = current(&index, tokens)
+					token := current(&index, tokens)
 
-					// Capturing loop starts
-					capture := []Tokens{}
-					capture = append(capture, token) // put in current token
-
-					for {
-						if token.Type == "RCURL" {
-							break
-						}
-
-						advance(&index)
-						token = current(&index, tokens)
-						capture = append(capture, token)
-					}
-					logicAST := ReRunParser(capture)
-
-					if token.Type == "RCURL" {
+					if token.Type == "SYMBOL" && token.Val == ";" {
 						meta["sub_type"] = "if"
+						if grandType == "if" {
+							meta["UUID"] = UUID
+							UUID++
+						}
 						ast = append(ast, map[string]interface{}{
 							"type":      "logic",
 							"meta":      meta,
 							"line":      ifLine,
 							"condition": condition,
-							"body":      logicAST,
+							"body":      astBody,
 						})
-					} else {
-						err := NewError("MalformedSyntax", token.Line, fmt.Sprintf("if %v { \n ... %s???%s", condition, Red, Reset), "This if-statement is missing a right-standing curly brace", true, "")
-						err.Throw()
 					}
 				} else {
-					err := NewError("MalformedSyntax", ifLine, fmt.Sprintf("if %v %s???%s \n ... }", condition, Red, Reset), "This if-statement is missing a left-standing curly brace", true, "")
+					err := NewError("MalformedSyntax", ifLine, fmt.Sprintf("if %v %s???%s", condition, Red, Reset), "This if-statement is missing either a body, left-standing curly brace, or right-standing curly brace", true, "")
 					err.Throw()
 				}
 			case "while":
@@ -546,93 +542,57 @@ func Parser() {
 				advance(&index)
 				token := current(&index, tokens)
 
-				if token.Type == "LCURL" {
+				if token.Type == "BODY" {
+					var toks []Tokens
+					val := token.Val.([]interface{})
 
-					capture := []Tokens{}
-					depth := 0
-					tmp := index - 1
-					token := current(&tmp, tokens)
+					b, _ := json.Marshal(val)
+					json.Unmarshal(b, &toks)
 
-					for {
-						advance(&tmp)
-						token = current(&tmp, tokens)
+					astBody := ReRunParser(toks)
 
-						if token.Type == "LCURL" {
-							depth++
-						}
-
-						if token.Type == "RCURL" {
-							depth--
-						}
-
-						if depth == 0 && token.Type == "RCURL" {
-							break
-						}
-
-						capture = append(capture, token)
-
-					}
-
-					logicAST := ReRunParser(capture)
-					if token.Type == "RCURL" {
+					advance(&index)
+					token := current(&index, tokens)
+					if token.Type == "SYMBOL" && token.Val == ";" {
 						meta["sub_type"] = "while"
 						ast = append(ast, map[string]interface{}{
 							"type":      "logic",
 							"meta":      meta,
 							"line":      whileLine,
 							"condition": condition,
-							"body":      logicAST,
+							"body":      astBody,
 						})
-					} else {
-						err := NewError("MalformedSyntax", whileLine, fmt.Sprintf("while %v { \n ... %s???%s", condition, Red, Reset), "This while loop is missing a right-standing curly brace", true, "")
-						err.Throw()
 					}
 				} else {
-					err := NewError("MalformedSyntax", whileLine, fmt.Sprintf("while %v %s???%s \n ... }", condition, Red, Reset), "This while loop is missing a left-standing curly brace", true, "")
+					err := NewError("MalformedSyntax", whileLine, fmt.Sprintf("while %v %s???%s", condition, Red, Reset), "This while loop is missing either a body, left-standing curly brace, or right-standing curly brace", true, "")
 					err.Throw()
 				}
 			case "repeat":
 				cond := fmt.Sprint(token.Val)
 				reLine := token.Line
 
-				if cmpRegEx(cond, `([A-Za-z]|\_|\d+)+\s->\s\(?.+\)?`) {
+				if cmpRegEx(cond, `\(?([A-Za-z]|\_|\d+)+\s->\s\(?.+\)?`) {
 					findDash := strings.IndexRune(cond, '-')
-					iterator := strings.TrimSpace(cond[:findDash])
+					iterator := strings.Replace(strings.TrimSpace(cond[:findDash]), "(", "", 1)
 
 					findGTT := strings.IndexRune(cond, '>')
-					repeatValue := strings.TrimSpace(cond[1+findGTT:])
+					repeatValue := strings.Replace(strings.TrimSpace(cond[1+findGTT:]), ")", "", 1)
 
 					advance(&index)
 					token := current(&index, tokens)
-					depth := 0
 
-					if token.Type == "LCURL" {
+					if token.Type == "BODY" {
+						var toks []Tokens
+						val := token.Val.([]interface{})
 
-						// Capturing loop starts
-						repeatCapture := []Tokens{}
-						repeatCapture = append(repeatCapture, token) // put in current token
+						b, _ := json.Marshal(val)
+						json.Unmarshal(b, &toks)
 
-						for {
-							if current(&index, tokens).Type == "LCURL" {
+						astBody := ReRunParser(toks)
 
-								depth++
-							}
-
-							if current(&index, tokens).Type == "RCURL" {
-								depth--
-							}
-
-							if depth == 0 && current(&index, tokens).Type == "RCURL" {
-								break
-							}
-
-							advance(&index)
-							token = current(&index, tokens)
-							repeatCapture = append(repeatCapture, token)
-						}
-						repeatLogic := ReRunParser(repeatCapture)
-
-						if token.Type == "RCURL" {
+						advance(&index)
+						token := current(&index, tokens)
+						if token.Type == "SYMBOL" && token.Val == ";" {
 							meta["sub_type"] = "repeat"
 							meta["iterator_var"] = iterator
 							meta["times"] = repeatValue
@@ -640,40 +600,29 @@ func Parser() {
 								"type": "logic",
 								"meta": meta,
 								"line": reLine,
-								"body": repeatLogic,
+								"body": astBody,
 							})
-						} else {
-							err := NewError("MalformedSyntax", reLine, fmt.Sprintf("repeat %v -> %v { \n ... %s???%s", iterator, repeatValue, Red, Reset), "This repeat loop is missing a right-standing curly brace", true, "")
-							err.Throw()
 						}
 					} else {
-						err := NewError("MalformedSyntax", reLine, fmt.Sprintf("repeat %v -> %v %s???%s \n ... }", iterator, repeatValue, Red, Reset), "This repeat loop is missing a left-standing curly brace", true, "")
+						err := NewError("MalformedSyntax", reLine, fmt.Sprintf("repeat %v -> %v %s???%s", iterator, repeatValue, Red, Reset), "This repeat loop is missing either a body, left-standing curly brace, or right-standing curly brace", true, "")
 						err.Throw()
 					}
 				} else if cmpRegEx(cond, `\(?\d+\)?`) {
 					advance(&index)
 					token := current(&index, tokens)
 
-					if token.Type == "LCURL" {
+					if token.Type == "BODY" {
+						var toks []Tokens
+						val := token.Val.([]interface{})
+
+						b, _ := json.Marshal(val)
+						json.Unmarshal(b, &toks)
+
+						astBody := ReRunParser(toks)
+
 						advance(&index)
-						token = current(&index, tokens)
-
-						// Capturing loop starts
-						repeatCapture := []Tokens{}
-						repeatCapture = append(repeatCapture, token) // put in current token
-
-						for {
-							if current(&index, tokens).Type == "RCURL" {
-								break
-							}
-
-							advance(&index)
-							token = current(&index, tokens)
-							repeatCapture = append(repeatCapture, token)
-						}
-						repeatLogic := ReRunParser(repeatCapture)
-
-						if token.Type == "RCURL" {
+						token := current(&index, tokens)
+						if token.Type == "SYMBOL" && token.Val == ";" {
 							meta["sub_type"] = "repeat"
 							meta["iterator_var"] = nil
 							meta["times"] = cond
@@ -681,14 +630,11 @@ func Parser() {
 								"type": "logic",
 								"meta": meta,
 								"line": reLine,
-								"body": repeatLogic,
+								"body": astBody,
 							})
-						} else {
-							err := NewError("MalformedSyntax", reLine, fmt.Sprintf("repeat %v { \n ... %s???%s", cond, Red, Reset), "This repeat loop is missing a right-standing curly brace", true, "")
-							err.Throw()
 						}
 					} else {
-						err := NewError("MalformedSyntax", reLine, fmt.Sprintf("repeat %v %s???%s \n ... }", cond, Red, Reset), "This repeat loop is missing a left-standing curly brace", true, "")
+						err := NewError("MalformedSyntax", reLine, fmt.Sprintf("repeat %v %s???%s \n ... }", cond, Red, Reset), "This repeat loop is missing either a body, left-standing curly brace, or right-standing curly brace", true, "")
 						err.Throw()
 					}
 				}

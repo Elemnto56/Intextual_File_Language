@@ -1,6 +1,9 @@
-if 3 > 1 {
-    output "What"
-} 
-else {
-    output "The"
+let x: int = 0
+
+while true {
+    if x == 10 {
+        break
+    }
+    output "WHat"
+    x += 1
 }
