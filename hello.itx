@@ -1,9 +1,14 @@
-let x: int = 0
+let x: int = 10
+let y: int = 11
 
-while true {
-    if x == 10 {
-        break
-    }
-    output "WHat"
-    x += 1
-}
+output x + y * 10
+
+output "Hello", " World"
+
+let content: string = "This is some test content"
+
+del("meet.txt")
+write("meet.txt", content)
+let z: string = read("meet.txt")
+
+output z

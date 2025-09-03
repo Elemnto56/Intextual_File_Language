@@ -27,13 +27,19 @@ func Contains(slice []interface{}, look interface{}) bool {
 	return false
 }
 
-func Lexer(filename string) {
+func Lexer(filename interface{}, givenLines []string) []map[string]interface{} {
 
 	pat2 := `([A-Za-z]+\_*?)+\[([0-9]+|\w+)\];?`
 	re2 := regexp.MustCompile(pat2)
 
-	file, err := os.Open(filename)
-	Check(err)
+	var file *os.File
+	var err error
+
+	if filename != nil {
+		file, err = os.Open(fmt.Sprint(filename))
+		Check(err)
+	}
+
 	defer file.Close()
 
 	var lines []string
@@ -47,6 +53,10 @@ func Lexer(filename string) {
 
 	// Banks
 	allTokens := []map[string]interface{}{}
+
+	if givenLines != nil {
+		lines = givenLines
+	}
 
 	for index := 0; index < len(lines); index++ {
 		line := strings.TrimSpace(lines[index])
@@ -261,11 +271,36 @@ func Lexer(filename string) {
 						"LINE": index + 1,
 					})
 				} else {
-					allTokens = append(allTokens, map[string]interface{}{
-						"TYPE": "IDENTIFIER",
-						"VAL":  temp,
-						"LINE": index + 1,
-					})
+					if i+1 < len(line) && Contains([]interface{}{"+", "-", "*", "/"}, strings.TrimSpace(string(line[i+1]))) {
+						var mathCapture string
+
+						mathCapture += string(line[i-1])
+
+						for i < len(line) {
+							crnt := string(line[i])
+
+							if crnt == "" {
+								i++
+								continue
+							}
+
+							mathCapture += crnt
+
+							i++
+						}
+
+						allTokens = append(allTokens, map[string]interface{}{
+							"TYPE": "MATH",
+							"VAL":  mathCapture,
+							"LINE": index + 1,
+						})
+					} else {
+						allTokens = append(allTokens, map[string]interface{}{
+							"TYPE": "IDENTIFIER",
+							"VAL":  temp,
+							"LINE": index + 1,
+						})
+					}
 				}
 				i -= 1
 				continue
@@ -353,7 +388,7 @@ func Lexer(filename string) {
 					index++
 				}
 
-				toks = reRunLexer(rawLines)
+				toks = Lexer(nil, rawLines)
 
 				allTokens = append(allTokens, map[string]interface{}{
 					"TYPE": "BODY",
@@ -474,4 +509,6 @@ func Lexer(filename string) {
 	cacheDir := filepath.Join(".intext", "cache")
 	os.MkdirAll(cacheDir, 0766)
 	os.WriteFile("./.intext/cache/Tokens.json", b, 0666)
+
+	return allTokens
 }

@@ -8,50 +8,90 @@
     "type": "let",
     "var_name": "x",
     "var_type": "int",
-    "var_value": 0
+    "var_value": 10
   },
   {
-    "body": [
-      {
-        "body": [
-          {
-            "line": 1,
-            "statement": "break"
-          }
-        ],
-        "condition": "x == 10",
-        "line": 1,
-        "meta": {
-          "UUID": 0,
-          "sub_type": "if"
-        },
-        "type": "logic"
-      },
-      {
-        "line": 4,
-        "meta": {
-          "print_type": "simple",
-          "raw_type": "STRING"
-        },
-        "type": "output",
-        "value": "WHat"
-      },
-      {
-        "line": 5,
-        "meta": {
-          "incr_type": "+=",
-          "new_val": 1,
-          "target": "x"
-        },
-        "sub_type": "incr",
-        "type": "expr"
-      }
-    ],
-    "condition": "true",
-    "line": 3,
+    "line": 2,
     "meta": {
-      "sub_type": "while"
+      "math": false,
+      "raw_type": "INT"
     },
-    "type": "logic"
+    "type": "let",
+    "var_name": "y",
+    "var_type": "int",
+    "var_value": 11
+  },
+  {
+    "line": 4,
+    "meta": {
+      "print_type": "mathematics",
+      "raw_type": "none"
+    },
+    "type": "output",
+    "value": "x + y * 10"
+  },
+  {
+    "line": 6,
+    "meta": {
+      "print_type": "mixed",
+      "raw_type": "none"
+    },
+    "type": "output",
+    "value": [
+      "Hello",
+      " World"
+    ]
+  },
+  {
+    "line": 8,
+    "meta": {
+      "math": false,
+      "raw_type": "STRING"
+    },
+    "type": "let",
+    "var_name": "content",
+    "var_type": "string",
+    "var_value": "This is some test content"
+  },
+  {
+    "call": "del",
+    "line": 10,
+    "meta": {
+      "raw": "STRING",
+      "target": "meet.txt"
+    },
+    "type": "function"
+  },
+  {
+    "call": "write",
+    "line": 11,
+    "meta": {
+      "input": "content",
+      "perms": 666,
+      "target": "meet.txt"
+    },
+    "type": "function"
+  },
+  {
+    "line": 12,
+    "meta": {
+      "math": false,
+      "raw_type": "FUNC"
+    },
+    "type": "let",
+    "var_name": "z",
+    "var_type": "string",
+    "var_value": {
+      "read": "meet.txt"
+    }
+  },
+  {
+    "line": 14,
+    "meta": {
+      "print_type": "simple",
+      "raw_type": "IDENTIFIER"
+    },
+    "type": "output",
+    "value": "z"
   }
 ]

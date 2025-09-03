@@ -20,16 +20,13 @@ func advance(index *int) {
 }
 
 func current(index *int, tokens []Tokens) Tokens {
-	/*
-		if *index >= len(tokens) {
-			err := NewError("UnknownValue", 0, fmt.Sprint(tokens[*index-1]), "The expression shows the last token before the supposed missing one", false, "")
-			err.Throw()
-		}
-	*/
+	if *index >= len(tokens) {
+		panic("Tokens ranged out in parser. Dev, fix it NOW!")
+	}
 	return tokens[*index]
 }
 
-func Parser() {
+func Parser(givenTokens []Tokens) []map[string]interface{} {
 	// Get tokens from JSON
 	bytes, _ := os.ReadFile("./.intext/cache/Tokens.json")
 	var tokens []Tokens
@@ -42,6 +39,10 @@ func Parser() {
 	// Iterators
 	index := 0
 	UUID := 0 // For if statements
+
+	if givenTokens != nil {
+		tokens = givenTokens
+	}
 
 	for index < len(tokens) {
 		token := current(&index, tokens)
@@ -267,7 +268,7 @@ func Parser() {
 					val := token.Val
 
 					temp := index + 1
-					if (current(&temp, tokens).Type == "SYMBOL" && current(&temp, tokens).Val == ";") || current(&temp, tokens).Type == "LBRACKET" {
+					if current(&temp, tokens).Type == "SYMBOL" && current(&temp, tokens).Val == ";" {
 						switch token.Type {
 						case "STRING", "INT", "BOOL", "FLOAT", "ORD", "CHAR", "IDENTIFIER":
 							meta["raw_type"] = _type
@@ -288,6 +289,21 @@ func Parser() {
 								"line":  token.Line,
 							})
 						}
+					} else if current(&temp, tokens).Type == "LBRACKET" {
+						advance(&index)
+						advance(&index)
+						token := current(&index, tokens)
+
+						idx := token.Val
+
+						meta["print_type"] = "ord_index"
+						meta["raw_type"] = "none"
+						ast = append(ast, map[string]interface{}{
+							"type":  "output",
+							"value": map[string]interface{}{fmt.Sprint(val): idx},
+							"meta":  meta,
+							"line":  token.Line,
+						})
 					} else if (current(&temp, tokens).Type == "SYMBOL" || current(&temp, tokens).Type == "COMMA") && current(&temp, tokens).Val == "," {
 						spagList := []interface{}{}
 						spagList = append(spagList, val) // Add the first val into the list; none left behind!
@@ -512,7 +528,7 @@ func Parser() {
 					b, _ := json.Marshal(val)
 					json.Unmarshal(b, &toks)
 
-					astBody := ReRunParser(toks)
+					astBody := Parser(toks)
 
 					advance(&index)
 					token := current(&index, tokens)
@@ -549,7 +565,7 @@ func Parser() {
 					b, _ := json.Marshal(val)
 					json.Unmarshal(b, &toks)
 
-					astBody := ReRunParser(toks)
+					astBody := Parser(toks)
 
 					advance(&index)
 					token := current(&index, tokens)
@@ -588,7 +604,7 @@ func Parser() {
 						b, _ := json.Marshal(val)
 						json.Unmarshal(b, &toks)
 
-						astBody := ReRunParser(toks)
+						astBody := Parser(toks)
 
 						advance(&index)
 						token := current(&index, tokens)
@@ -618,7 +634,7 @@ func Parser() {
 						b, _ := json.Marshal(val)
 						json.Unmarshal(b, &toks)
 
-						astBody := ReRunParser(toks)
+						astBody := Parser(toks)
 
 						advance(&index)
 						token := current(&index, tokens)
@@ -689,4 +705,6 @@ func Parser() {
 	b, err := json.MarshalIndent(ast, "", "  ")
 	Check(err)
 	os.WriteFile("./.intext/cache/AST.json", b, 0666)
+
+	return ast
 }
