@@ -1,84 +1,45 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Intext Testing</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="icon" href="./favicon-32x32.png" />
-</head>
-<body id="bd" class="dark-mode">
-    <script type="text/javascript" src="script.js"></script>
-    <button id="bt" onclick="EnableLight()">Enable Light Mode?</button>
+<!DOCTYPE HTML>
+<html lang="en-us">
+    <head>
+        <title>Playground Downtime</title>
+    </head>
+    <style>
+        * {
+            text-align: center;
+            background-color: #121212;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        h1, h5, h6, p, button, input {
+            color: #f0f0f0;
+        }
+    </style>
+    <body>
+        <h1>The Intext Playground is on Downtime</h1>
+        <h5>Making things better behind the scenes...</h5>
 
-  <div class="playground-container">
-    <h1>Intext Playground</h1>
+        <h6>Play a minigame for fun!</h6>
 
-    <label for="code-input">Your Code</label>
-    <div class="editor-section">
-      <div class="check-wrapper">
-        <label>
-          <input type="checkbox" id="enter-submit">
-          Enable Enter to Sumbit?
-        </label>
-        <label>
-          <input type="checkbox" id="use-tab"/>
-          Enable Tab usage?
-        </label>
-        <button id="submit" onclick="Run()">Submit Code</button>
-      </div>
-      <br>
+        <p>Guess a number between 1 and 100:</p>
+        <script>
+            let secret = Math.floor(Math.random() * 100) + 1;
 
-      <textarea id="code-input" class="textarea" placeholder="Write your code here..."></textarea>
-      <script type="text/javascript">
-          const x = document.getElementById("use-tab")
-          const y = document.getElementById("enter-submit")
+            function checkGuess() {
+                const input = document.getElementById("guess").value;
+                const result = document.getElementById("result");
 
-          y.addEventListener("change", function () {
-            if (y.checked) {
-              const text = document.getElementById("code-input")
-
-              text.addEventListener("keydown", function (e) {
-                if (e.key == "Enter" && y.checked) {
-                  e.preventDefault()
-
-                  Run()
+                if (input < secret) {
+                result.textContent = "Too low!";
+                } else if (input > secret) {
+                result.textContent = "Too high!";
+                } else {
+                result.textContent = "Correct!";
+                secret = Math.floor(Math.random() * 100) + 1;
                 }
-              })
-            } else {
-              console.log()
             }
-          })
-
-          x.addEventListener("change", function () {
-            if (x.checked) {
-              const text = document.getElementById("code-input")
-
-              text.addEventListener("keydown", function (e) {
-                if (e.key == "Tab" && x.checked) {
-                  e.preventDefault()
-
-                  const start = this.selectionStart
-                  const end = this.selectionEnd
-
-                  this.value = this.value.substring(0, start) + "    " + this.value.substring(end)
-
-                  this.selectionStart = this.selectionEnd = start + 1
-                }
-              })
-            } else {
-              console.log()
-            }
-          })
         </script>
-    </div>
-
-    <div class="output-section">
-      <label for="code-output">Output</label>
-      <textarea id="code-output" class="textarea output" placeholder="Output will appear here..." readonly></textarea>
-    </div>
-
-    <button onclick="Return()">Return Back to Docs?</button>
-  </div>
-</body>
+    
+        <input type="number" id="guess">
+        <button onclick="checkGuess()">Submit</button>
+        <p id="result"></p>
+    </body>
 </html>
