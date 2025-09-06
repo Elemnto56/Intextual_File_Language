@@ -1,14 +1,3 @@
-let x: int = 10
-let y: int = 11
-
-output x + y * 10
-
-output "Hello", " World"
-
-let content: string = "This is some test content"
-
-del("meet.txt")
-write("meet.txt", content)
-let z: string = read("meet.txt")
-
-output z
+macro (call: string, calltwo: string) . greet(param: string) -> string, int {
+    output "Hello World"
+}

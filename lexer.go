@@ -74,38 +74,51 @@ func Lexer(filename interface{}, givenLines []string) []map[string]interface{} {
 			err.Throw()
 		}
 
-		/*
-			if strings.HasPrefix(line, "macro") {
-				re := regexp.MustCompile(`(\w+)?\([^\)]*\)|[\.|\,]|\-\>\s*([a-zA-Z0-9_,\s]+)`)
-				matches := re.FindAllString(line, -1)
+		if strings.HasPrefix(line, "macro") {
+			re := regexp.MustCompile(`(\([^\(\)]*\)|\.|\s[\w]+|\-\>|(string|int|bool|float|char|(ord|order))|\,)`)
+			matches := re.FindAllString(line, -1)
 
-				callParmas := []string{}
-				callEndFlag := true
+			callsEnded := false
+			paramsEnded := false
 
-				stdParams := []string{}
-				stdEndFlag := true
+			var calls string
+			var params string
+			var name string
+			returns := []string{}
 
-				for _, element := range matches {
-					if element == "." {
-						callEndFlag = false
-						continue
-					}
-
-					if element == "->" || strings.HasPrefix(element, "->") {
-						stdEndFlag = false
-					}
-
-					if callEndFlag {
-						callParmas = append(callParmas, strings.TrimSpace(element))
-					}
-					if stdEndFlag {
-						stdParams = append(stdParams, strings.TrimSpace(element))
-					}
+			for i := 0; i < len(matches); i++ {
+				if matches[i] == "." {
+					callsEnded = true
+					name = matches[i+1]
 				}
 
-				os.Exit(0)
+				if i+2 < len(matches) && matches[i+2] == "->" {
+					paramsEnded = true
+					i += 1
+				}
+
+				if matches[i] == "," {
+					continue
+				}
+
+				if strings.HasPrefix(matches[i], "(") && !callsEnded {
+					calls = matches[i]
+					continue
+				}
+
+				if strings.HasPrefix(matches[i], "(") && callsEnded {
+					params = matches[i]
+					continue
+				}
+
+				if cmpRegEx(matches[i], `(string|int|bool|float|char|(ord|order))`) && paramsEnded {
+					returns = append(returns, strings.TrimSpace(matches[i]))
+				}
 			}
-		*/
+
+			fmt.Println(name, calls, params, returns)
+			break
+		}
 
 	outer: // Label for loop
 		for i := 0; i < len(line); i++ { // NOTE: Some are place early so the others behind don't get triggered beforehand
