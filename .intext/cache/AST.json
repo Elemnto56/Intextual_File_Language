@@ -1,1 +1,50 @@
-[]
+[
+  {
+    "body": [
+      {
+        "line": 1,
+        "meta": {
+          "print_type": "mixed",
+          "raw_type": "none"
+        },
+        "type": "output",
+        "value": [
+          "one",
+          "two"
+        ]
+      }
+    ],
+    "line": 1,
+    "meta": {
+      "call": {},
+      "macro-type": "declaration",
+      "param": {
+        "one": "string",
+        "two": "string"
+      },
+      "returns": [
+        "int",
+        "bool"
+      ]
+    },
+    "name": "greet",
+    "type": "macro"
+  },
+  {
+    "line": 4,
+    "meta": {
+      "macro-args": [
+        "\"Hello\"",
+        "\" World\""
+      ],
+      "macro-expect": 2,
+      "macro-name": "greet",
+      "macro-type": "assignment"
+    },
+    "type": "declare",
+    "vars": [
+      "x",
+      "y"
+    ]
+  }
+]

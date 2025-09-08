@@ -1,17 +1,10 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 )
-
-type temp struct {
-	name string `json:"e"`
-	age  int    `json:"a"`
-}
 
 func main() {
 	var rootCmd = &cobra.Command{
@@ -52,7 +45,7 @@ func main() {
 			Lexer(filename, nil)
 			Parser(nil)
 			Validator(nil)
-			Interpreter(nil)
+			//Interpreter(nil)
 		},
 	}
 
@@ -60,14 +53,7 @@ func main() {
 		Use:   "test",
 		Short: "Test stuff",
 		Run: func(cmd *cobra.Command, args []string) {
-			var cap []temp
 
-			cap = append(cap, temp{name: "Jack", age: 15})
-			cap = append(cap, temp{name: "Newman", age: 25})
-			fmt.Println(cap)
-			val, err := json.MarshalIndent(cap, "", "  ")
-			Check(err)
-			os.WriteFile("test.json", val, 0644)
 		},
 	}
 

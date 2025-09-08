@@ -107,3 +107,9 @@ func cmpRegEx(find string, regex string) bool {
 	}
 	return false
 }
+
+func sliceOfRegex(find string, regex string) []string {
+	temp := regexp.MustCompile(regex)
+
+	return temp.FindAllString(find, -1)
+}

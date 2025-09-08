@@ -1,3 +1,4 @@
-macro (call: string, calltwo: string) . greet(param: string) -> string, int {
-    output "Hello World"
+macro . greet(one: string, two: string) -> int, bool {
+    output one, two
 }
+declare x, y = greet("Hello", " World")

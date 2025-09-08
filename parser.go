@@ -49,9 +49,8 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 
 		if token.Type == "KEYWORD" {
 			switch token.Val {
-			case "let", "declare":
+			case "let":
 				meta := make(map[string]interface{})
-				grandType := token.Val
 				advance(&index)
 				token := current(&index, tokens)
 				if token.Type == "IDENTIFIER" {
@@ -76,9 +75,10 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 									temp := index + 1 // Did this in order for it to be a sight into the future
 									if token.Meta["assignment"] == "math" {
 										meta["math"] = true
+										meta["assignment-type"] = "basic"
 
 										ast = append(ast, map[string]interface{}{
-											"type":      grandType,
+											"type":      "let",
 											"var_type":  Type,
 											"var_name":  name,
 											"var_value": value,
@@ -89,8 +89,9 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 									} else if current(&temp, tokens).Type == "SYMBOL" && current(&temp, tokens).Val == ";" {
 										advance(&index)
 										meta["math"] = false
+										meta["assignment-type"] = "basic"
 										ast = append(ast, map[string]interface{}{
-											"type":      grandType,
+											"type":      "let",
 											"var_type":  Type,
 											"var_name":  name,
 											"var_value": value,
@@ -123,8 +124,9 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 
 										if token.Type == "SYMBOL" && token.Val == ";" {
 											meta["raw_type"] = "concat"
+											meta["assignment-type"] = "basic"
 											ast = append(ast, map[string]interface{}{
-												"type":      grandType,
+												"type":      "let",
 												"var_type":  Type,
 												"var_name":  name,
 												"var_value": concatCatch,
@@ -133,7 +135,7 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 											})
 										}
 									} else {
-										err := NewError("MissingBreaker", token.Line, fmt.Sprintf("%v %v: %v = %v <-", grandType, name, Type, value), "This line is missing a semicolon", true, "")
+										err := NewError("MissingBreaker", token.Line, fmt.Sprintf("%v %v: %v = %v <-", "let", name, Type, value), "This line is missing a semicolon", true, "")
 										err.Throw()
 									}
 								} else if token.Type == "LBRACKET" {
@@ -178,8 +180,9 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 										meta["raw_type"] = "ORDER"
 										meta["math"] = false
 										meta["ord-ref"] = VarRef
+										meta["assignment-type"] = "basic"
 										ast = append(ast, map[string]interface{}{
-											"type":      grandType,
+											"type":      "let",
 											"var_type":  Type,
 											"var_name":  name,
 											"var_value": userList,
@@ -203,8 +206,9 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 												if token.Type == "PARA" {
 													meta["raw_type"] = "FUNC"
 													meta["math"] = false
+													meta["assignment-type"] = "basic"
 													ast = append(ast, map[string]interface{}{
-														"type":      grandType,
+														"type":      "let",
 														"var_type":  Type,
 														"var_name":  name,
 														"var_value": map[string]interface{}{"read": file},
@@ -213,15 +217,15 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 													})
 													advance(&index)
 												} else {
-													err := NewError("MalformedSyntax", token.Line, fmt.Sprintf("%v %v: %v = %sread(...%s;", grandType, name, Type, Red, Reset), "The following read function was not properly closed", true, "Add a paranthesis after the string that calls the file (e.g. read(...))")
+													err := NewError("MalformedSyntax", token.Line, fmt.Sprintf("%v %v: %v = %sread(...%s;", "let", name, Type, Red, Reset), "The following read function was not properly closed", true, "Add a paranthesis after the string that calls the file (e.g. read(...))")
 													err.Throw()
 												}
 											} else {
-												err := NewError("MalformedSyntax", token.Line, fmt.Sprintf("%v %v: %v = %sread...)%s;", grandType, name, Type, Red, Reset), "The following read function was not properly closed", true, "Add a paranthesis before the string that calls the file (e.g. read(...))")
+												err := NewError("MalformedSyntax", token.Line, fmt.Sprintf("%v %v: %v = %sread...)%s;", "let", name, Type, Red, Reset), "The following read function was not properly closed", true, "Add a paranthesis before the string that calls the file (e.g. read(...))")
 												err.Throw()
 											}
 										} else {
-											err := NewError("TypeMismatch", token.Line, fmt.Sprintf("%v %v: %s%v%s = read(...);", grandType, name, Red, Type, Reset), "The wrong type was assigned to read()", true, fmt.Sprintf("Change the type to %sstring%s", Yellow, Reset))
+											err := NewError("TypeMismatch", token.Line, fmt.Sprintf("%v %v: %s%v%s = read(...);", "let", name, Red, Type, Reset), "The wrong type was assigned to read()", true, fmt.Sprintf("Change the type to %sstring%s", Yellow, Reset))
 											err.Throw()
 										}
 									}
@@ -229,12 +233,12 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 									value := token.Val
 									meta["math"] = true
 									meta["raw_type"] = "none"
-
+									meta["assignment-type"] = "basic"
 									temp := index + 1
 									if current(&temp, tokens).Type == "SYMBOL" && current(&temp, tokens).Val == ";" {
 										advance(&index)
 										ast = append(ast, map[string]interface{}{
-											"type":      grandType,
+											"type":      "let",
 											"var_type":  Type,
 											"var_name":  name,
 											"var_value": value,
@@ -243,21 +247,107 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 										})
 									}
 								} else {
-									err := NewError("UnknownValue", token.Line, fmt.Sprintf("%v %v: %v = %s%v%s", grandType, name, Type, Red, token.Val, Reset), "The following value could not be correctly parsed", true, "Did you forget any quotes or accidently put a variable in the statement?")
+									err := NewError("UnknownValue", token.Line, fmt.Sprintf("%v %v: %v = %s%v%s", "let", name, Type, Red, token.Val, Reset), "The following value could not be correctly parsed", true, "Did you forget any quotes or accidently put a variable in the statement?")
 									err.Throw()
 								}
 							} else {
-								err := NewError("MalformedSyntax", token.Line, fmt.Sprintf("%v %v:%v %s??%s", grandType, name, Type, Red, Reset), "The following statement failed to abide by Intext's syntax rules", true, "The \"??\" is where an \"=\" is expected")
+								err := NewError("MalformedSyntax", token.Line, fmt.Sprintf("%v %v:%v %s??%s", "let", name, Type, Red, Reset), "The following statement failed to abide by Intext's syntax rules", true, "The \"??\" is where an \"=\" is expected")
 								err.Throw()
 							}
 						} else {
-							err := NewError("TypeMismatch", token.Line, fmt.Sprintf("%v %v: %v <-", grandType, name, token.Val), "The following line does not include a valid type", true, "")
+							err := NewError("TypeMismatch", token.Line, fmt.Sprintf("%v %v: %v <-", "let", name, token.Val), "The following line does not include a valid type", true, "")
 							err.Throw()
 						}
+					} else if token.Val == "," {
+						varSet := []interface{}{}
+
+						varSet = append(varSet, name)
+						for {
+							if token.Val == "=" {
+								break
+							}
+
+							if token.Val == "," {
+								advance(&index)
+								token = current(&index, tokens)
+							}
+
+							if token.Type == "IDENTIFIER" {
+								varSet = append(varSet, token.Val)
+							}
+
+							advance(&index)
+							token = current(&index, tokens)
+						}
+
+						if token.Type == "OPERATOR" && token.Val == "=" {
+							advance(&index)
+							token = current(&index, tokens)
+
+							// Possibly add if statment for expansion?
+							// Macro calls
+							meta["assignment-type"] = "multi"
+							meta["macro-args"] = token.Meta["args"]
+							meta["macro-name"] = token.Meta["name"]
+							meta["macro-expect"] = len(varSet)
+							meta["macro-type"] = "assignment"
+							ast = append(ast, map[string]interface{}{
+								"type": "let",
+								"line": token.Line,
+								"meta": meta,
+								"vars": varSet,
+							})
+							advance(&index)
+						}
+
 					} else {
-						err := NewError("LexerErr", token.Line, fmt.Sprintf("%v %v%v <-", grandType, name, token.Val), "Invalid character on this line", true, "Did you mean ':'?")
+						err := NewError("LexerErr", token.Line, fmt.Sprintf("%v %v%v <-", "let", name, token.Val), "Invalid character on this line", true, "Did you mean ':'?")
 						err.Throw()
 					}
+				}
+			case "declare":
+				advance(&index)
+				token := current(&index, tokens)
+				meta := make(map[string]interface{})
+
+				// Possibly add if-statement to check for var (IDENTIFIER)
+				varSet := []interface{}{}
+
+				for {
+					if token.Val == "=" {
+						break
+					}
+
+					if token.Val == "," {
+						advance(&index)
+						token = current(&index, tokens)
+					}
+
+					if token.Type == "IDENTIFIER" {
+						varSet = append(varSet, token.Val)
+					}
+
+					advance(&index)
+					token = current(&index, tokens)
+				}
+
+				if token.Type == "OPERATOR" && token.Val == "=" {
+					advance(&index)
+					token = current(&index, tokens)
+
+					// Possibly add if statment for expansion?
+					// Macro calls
+					meta["macro-args"] = token.Meta["args"]
+					meta["macro-name"] = token.Meta["name"]
+					meta["macro-expect"] = len(varSet)
+					meta["macro-type"] = "assignment"
+					ast = append(ast, map[string]interface{}{
+						"type": "declare",
+						"line": token.Line,
+						"meta": meta,
+						"vars": varSet,
+					})
+					advance(&index)
 				}
 			case "output":
 				advance(&index)
@@ -695,6 +785,72 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 					err.Throw()
 
 				}
+			}
+		} else if token.Type == "MACRO" {
+			meta := make(map[string]interface{})
+			metaJSON := token.Meta
+			macLine := token.Line
+
+			switch token.SubType {
+			case "declaration":
+
+				callStr := fmt.Sprint(metaJSON["call"])
+				callMap := make(map[string]interface{})
+
+				name := strings.TrimSpace(fmt.Sprint(metaJSON["name"]))
+				returns := metaJSON["returns"].([]interface{})
+
+				paramStr := fmt.Sprint(metaJSON["param"])
+				paramMap := make(map[string]interface{})
+
+				matchForParam := `\w+\:\s?(string|int|bool|float|char|(ord|order))`
+
+				for _, c := range sliceOfRegex(callStr, matchForParam) {
+					parts := strings.Split(c, ":")
+					cName := strings.TrimSpace(parts[0])
+					cType := strings.TrimSpace(parts[1])
+
+					callMap[cName] = cType
+				}
+
+				for _, p := range sliceOfRegex(paramStr, matchForParam) {
+					parts := strings.Split(p, ":")
+					pName := strings.TrimSpace(parts[0])
+					pType := strings.TrimSpace(parts[1])
+
+					paramMap[pName] = pType
+				}
+
+				advance(&index)
+				token = current(&index, tokens)
+
+				if token.Type == "BODY" {
+					var toks []Tokens
+					macBody := token.Val.([]interface{})
+
+					b, _ := json.Marshal(macBody)
+					json.Unmarshal(b, &toks)
+
+					astBody := Parser(toks)
+
+					meta["call"] = callMap
+					meta["param"] = paramMap
+					meta["returns"] = returns
+					meta["macro-type"] = "declaration"
+					ast = append(ast, map[string]interface{}{
+						"meta": meta,
+						"type": "macro",
+						"line": macLine,
+						"name": name,
+						"body": astBody,
+					})
+					advance(&index)
+				} else {
+					err := NewError("MalformedSyntax", macLine, fmt.Sprintf("macro ... %v ... %s???%s", name, Red, Reset), "This macro declaration is missing either a left-standing curly brace, or right-standing curly brace", true, "")
+					err.Throw()
+				}
+			case "call":
+
 			}
 		}
 

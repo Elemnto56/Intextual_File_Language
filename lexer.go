@@ -34,30 +34,31 @@ func Lexer(filename interface{}, givenLines []string) []map[string]interface{} {
 
 	var file *os.File
 	var err error
+	var lines []string
 
 	if filename != nil {
 		file, err = os.Open(fmt.Sprint(filename))
 		Check(err)
+
+		defer file.Close()
+
+		scan := bufio.NewScanner(file)
+		for scan.Scan() {
+			lines = append(lines, scan.Text())
+		}
+		fileErr := scan.Err()
+		Check(fileErr)
+
 	}
-
-	defer file.Close()
-
-	var lines []string
-
-	scan := bufio.NewScanner(file)
-	for scan.Scan() {
-		lines = append(lines, scan.Text())
-	}
-	fileErr := scan.Err()
-	Check(fileErr)
 
 	// Banks
 	allTokens := []map[string]interface{}{}
+	lookUp := make(map[string]interface{})
 
 	if givenLines != nil {
 		lines = givenLines
 	}
-
+	//outer:
 	for index := 0; index < len(lines); index++ {
 		line := strings.TrimSpace(lines[index])
 
@@ -102,12 +103,12 @@ func Lexer(filename interface{}, givenLines []string) []map[string]interface{} {
 				}
 
 				if strings.HasPrefix(matches[i], "(") && !callsEnded {
-					calls = matches[i]
+					calls = matches[i][1 : len(matches[i])-1]
 					continue
 				}
 
 				if strings.HasPrefix(matches[i], "(") && callsEnded {
-					params = matches[i]
+					params = matches[i][1 : len(matches[i])-1]
 					continue
 				}
 
@@ -116,11 +117,19 @@ func Lexer(filename interface{}, givenLines []string) []map[string]interface{} {
 				}
 			}
 
-			fmt.Println(name, calls, params, returns)
-			break
+			allTokens = append(allTokens, map[string]interface{}{
+				"TYPE":     "MACRO",
+				"META":     map[string]interface{}{"call": calls, "param": params, "name": name, "returns": returns},
+				"LINE":     index + 1,
+				"SUB-TYPE": "declaration",
+			})
+
+			lookUp["macro-name"] = strings.TrimSpace(name)
+
+			line = "{"
 		}
 
-	outer: // Label for loop
+	inner: // Label for loop
 		for i := 0; i < len(line); i++ { // NOTE: Some are place early so the others behind don't get triggered beforehand
 			char := rune(line[i])
 
@@ -178,7 +187,7 @@ func Lexer(filename interface{}, givenLines []string) []map[string]interface{} {
 								"VAL":  string(char),
 								"LINE": index + 1,
 							})
-							continue outer
+							continue inner
 						}
 					}
 				}
@@ -202,6 +211,7 @@ func Lexer(filename interface{}, givenLines []string) []map[string]interface{} {
 
 			// Checks for words; very complex; stuff like output, declare, and types go here
 			if unicode.IsLetter(char) {
+
 				temp := ""
 				var indexCheck bool = false
 
@@ -220,7 +230,6 @@ func Lexer(filename interface{}, givenLines []string) []map[string]interface{} {
 						i++
 					}
 				}
-
 				if Contains([]interface{}{"output", "declare", "let"}, temp) {
 					allTokens = append(allTokens, map[string]interface{}{
 						"TYPE": "KEYWORD",
@@ -283,6 +292,34 @@ func Lexer(filename interface{}, givenLines []string) []map[string]interface{} {
 						"VAL":  temp,
 						"LINE": index + 1,
 					})
+				} else if trimmedName := strings.TrimSpace(temp); lookUp["macro-name"] == trimmedName {
+					i++
+					rawArgs := ""
+					argList := []interface{}{}
+
+					for i < len(line) && string(line[i]) != ")" {
+						if string(line[i]) == "," {
+							i++
+							continue
+						}
+
+						rawArgs += string(line[i])
+						i++
+					}
+					for _, element := range sliceOfRegex(rawArgs, `(\"(?:\\.|[^\"\\])*\"|[\d|\.]+|(true|false)|\[.+\]|\'[A-Za-z]\'|\w+)`) {
+						argList = append(argList, element)
+					}
+
+					allTokens = append(allTokens, map[string]interface{}{
+						"LINE":     index + 1,
+						"TYPE":     "MACRO",
+						"SUB-TYPE": "call",
+						"META": map[string]interface{}{
+							"name": trimmedName,
+							"args": argList,
+						},
+					})
+					i++
 				} else {
 					if i+1 < len(line) && Contains([]interface{}{"+", "-", "*", "/"}, strings.TrimSpace(string(line[i+1]))) {
 						var mathCapture string
@@ -397,7 +434,8 @@ func Lexer(filename interface{}, givenLines []string) []map[string]interface{} {
 							break
 						}
 					}
-					rawLines = append(rawLines, lines[index])
+
+					rawLines = append(rawLines, strings.TrimSpace(lines[index]))
 					index++
 				}
 

@@ -22,6 +22,13 @@ var contFlag bool = false
 func Interpreter(givenNodes []map[string]interface{}) {
 	//Func Globals
 	var uuid int = 0
+	type MarcoDef struct {
+		calls      map[string]interface{}
+		parameters map[string]interface{}
+		returns    []interface{}
+		body       []map[string]interface{}
+	}
+	macroTable := make(map[string]MarcoDef)
 
 	// Grab AST
 	bytes, _ := os.ReadFile("./.intext/cache/AST.json")
@@ -49,7 +56,7 @@ func Interpreter(givenNodes []map[string]interface{}) {
 		}
 
 		switch node["type"] {
-		case "let", "declare":
+		case "let":
 			name := node["var_name"].(string)
 			Type := node["var_type"]
 			val := node["var_value"]
@@ -123,6 +130,10 @@ func Interpreter(givenNodes []map[string]interface{}) {
 					InterpreterVariables[name] = valList
 				}
 			}
+		case "declare":
+			// TODO: Add macro giving return values `declare x = myMacro()`.
+			// Also, add standalone macro calls, and variable macro calls (x.myMacro())
+
 		case "output":
 			value := node["value"]
 			meta := node["meta"].(map[string]interface{})
@@ -424,6 +435,27 @@ func Interpreter(givenNodes []map[string]interface{}) {
 
 					InterpreterVariables[rawTarget] = val
 				}
+			}
+
+		case "macro":
+			meta := node["meta"].(map[string]interface{})
+
+			if meta["macro-type"] == "declaration" {
+				rawBody := node["body"].([]interface{})
+				body := []map[string]interface{}{}
+
+				for _, element := range rawBody {
+					body = append(body, element.(map[string]interface{}))
+				}
+
+				macroTable[fmt.Sprint(node["name"])] = MarcoDef{
+					calls:      meta["call"].(map[string]interface{}),
+					parameters: meta["param"].(map[string]interface{}),
+					returns:    meta["returns"].([]interface{}),
+					body:       body,
+				}
+
+				fmt.Println(macroTable)
 			}
 		}
 	}
