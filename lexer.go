@@ -90,7 +90,7 @@ func Lexer(filename interface{}, givenLines []string) []map[string]interface{} {
 			for i := 0; i < len(matches); i++ {
 				if matches[i] == "." {
 					callsEnded = true
-					name = matches[i+1]
+					name = strings.TrimSpace(matches[i+1])
 				}
 
 				if i+2 < len(matches) && matches[i+2] == "->" {
@@ -296,9 +296,18 @@ func Lexer(filename interface{}, givenLines []string) []map[string]interface{} {
 					i++
 					rawArgs := ""
 					argList := []interface{}{}
+					var depth int = 0
 
 					for i < len(line) && string(line[i]) != ")" {
-						if string(line[i]) == "," {
+						if string(line[i]) == "[" {
+							depth++
+						}
+
+						if string(line[i]) == "]" {
+							depth--
+						}
+
+						if string(line[i]) == "," && depth == 0 {
 							i++
 							continue
 						}

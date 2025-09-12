@@ -284,17 +284,20 @@ func Validator(givenNodes []map[string]interface{}) {
 				}
 			}
 		case "macro":
-			body := node["body"].([]interface{})
-			astBody := []map[string]interface{}{}
 			meta := node["meta"].(map[string]interface{})
 
-			for _, element := range body {
-				astBody = append(astBody, element.(map[string]interface{}))
+			if meta["macro-type"] == "declaration" {
+				body := node["body"].([]interface{})
+				astBody := []map[string]interface{}{}
+
+				for _, element := range body {
+					astBody = append(astBody, element.(map[string]interface{}))
+				}
+
+				Validator(astBody)
+
+				macroLookUp[fmt.Sprint(node["name"])] = len(meta["returns"].([]interface{}))
 			}
-
-			Validator(astBody)
-
-			macroLookUp[fmt.Sprint(node["name"])] = len(meta["returns"].([]interface{}))
 		}
 	}
 

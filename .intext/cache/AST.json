@@ -4,47 +4,39 @@
       {
         "line": 1,
         "meta": {
-          "print_type": "mixed",
-          "raw_type": "none"
+          "print_type": "simple",
+          "raw_type": "STRING"
         },
         "type": "output",
-        "value": [
-          "one",
-          "two"
-        ]
+        "value": "Hello World!"
       }
     ],
     "line": 1,
     "meta": {
       "call": {},
       "macro-type": "declaration",
-      "param": {
-        "one": "string",
-        "two": "string"
-      },
-      "returns": [
-        "int",
-        "bool"
-      ]
+      "param": {},
+      "returns": []
     },
     "name": "greet",
     "type": "macro"
   },
   {
-    "line": 4,
+    "line": 5,
     "meta": {
-      "macro-args": [
-        "\"Hello\"",
-        "\" World\""
-      ],
-      "macro-expect": 2,
-      "macro-name": "greet",
-      "macro-type": "assignment"
+      "args": null,
+      "macro-type": "standalone"
     },
-    "type": "declare",
-    "vars": [
-      "x",
-      "y"
-    ]
+    "name": "greet",
+    "type": "macro"
+  },
+  {
+    "line": 6,
+    "meta": {
+      "args": null,
+      "macro-type": "standalone"
+    },
+    "name": "greet",
+    "type": "macro"
   }
 ]

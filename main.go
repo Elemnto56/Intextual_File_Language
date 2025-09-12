@@ -29,7 +29,7 @@ func main() {
                                                            `)
 			fmt.Println(`
 			-----------
-		Version: v0.8									
+		Version: v0.8.1									
 		Codename: Where's the Logic?
 		Developer: Elemnto56 @ Github`)
 
@@ -43,8 +43,8 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			filename := args[0]
 			Lexer(filename, nil)
-			Parser(nil)
-			Validator(nil)
+			//Parser(nil)
+			//Validator(nil)
 			//Interpreter(nil)
 		},
 	}

@@ -440,7 +440,8 @@ func Interpreter(givenNodes []map[string]interface{}) {
 		case "macro":
 			meta := node["meta"].(map[string]interface{})
 
-			if meta["macro-type"] == "declaration" {
+			switch meta["macro-type"] {
+			case "declaration":
 				rawBody := node["body"].([]interface{})
 				body := []map[string]interface{}{}
 
@@ -455,7 +456,12 @@ func Interpreter(givenNodes []map[string]interface{}) {
 					body:       body,
 				}
 
-				fmt.Println(macroTable)
+			case "standalone":
+				if _, ok := macroTable[fmt.Sprint(node["name"])]; meta["args"] == nil && ok {
+					mac := macroTable[fmt.Sprint(node["name"])]
+
+					Interpreter(mac.body)
+				}
 			}
 		}
 	}

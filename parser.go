@@ -850,7 +850,22 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 					err.Throw()
 				}
 			case "call":
+				args := token.Meta["args"].([]interface{})
+				name := token.Meta["name"]
 
+				if len(args) != 0 {
+
+				} else {
+					meta["macro-type"] = "standalone"
+					meta["args"] = nil
+					ast = append(ast, map[string]interface{}{
+						"type": "macro",
+						"meta": meta,
+						"line": macLine,
+						"name": name,
+					})
+					advance(&index)
+				}
 			}
 		}
 
