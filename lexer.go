@@ -27,7 +27,10 @@ func Contains(slice []interface{}, look interface{}) bool {
 	return false
 }
 
-func Lexer(filename interface{}, givenLines []string) []map[string]interface{} {
+// Globals
+var lookUp = make(map[string]interface{})
+
+func Lexer(filename interface{}, givenLines []string, appendSemi bool) []map[string]interface{} {
 
 	pat2 := `([A-Za-z]+\_*?)+\[([0-9]+|\w+)\];?`
 	re2 := regexp.MustCompile(pat2)
@@ -53,7 +56,6 @@ func Lexer(filename interface{}, givenLines []string) []map[string]interface{} {
 
 	// Banks
 	allTokens := []map[string]interface{}{}
-	lookUp := make(map[string]interface{})
 
 	if givenLines != nil {
 		lines = givenLines
@@ -166,7 +168,7 @@ func Lexer(filename interface{}, givenLines []string) []map[string]interface{} {
 
 				index += 1
 				for index < len(lines) {
-					if strings.TrimSpace(lines[index]) == "*/" {
+					if strings.TrimSpace(lines[index]) == "*/" { // FIXME: Add closing comment line support; don't leave on single line
 						break
 					}
 					multiComment += lines[index]
@@ -295,7 +297,7 @@ func Lexer(filename interface{}, givenLines []string) []map[string]interface{} {
 				} else if trimmedName := strings.TrimSpace(temp); lookUp["macro-name"] == trimmedName {
 					i++
 					rawArgs := ""
-					argList := []interface{}{}
+					argList := []string{}
 					var depth int = 0
 
 					for i < len(line) && string(line[i]) != ")" {
@@ -319,21 +321,22 @@ func Lexer(filename interface{}, givenLines []string) []map[string]interface{} {
 						argList = append(argList, element)
 					}
 
+					fromLexer := Lexer(nil, argList, false)
+
 					allTokens = append(allTokens, map[string]interface{}{
 						"LINE":     index + 1,
 						"TYPE":     "MACRO",
 						"SUB-TYPE": "call",
 						"META": map[string]interface{}{
 							"name": trimmedName,
-							"args": argList,
+							"args": fromLexer,
 						},
 					})
 					i++
 				} else {
-					if i+1 < len(line) && Contains([]interface{}{"+", "-", "*", "/"}, strings.TrimSpace(string(line[i+1]))) {
+					if i+3 < len(line) && Contains([]interface{}{"+", "-", "*", "/"}, strings.TrimSpace(string(line[i+1]))) && !Contains([]interface{}{"+=", "-=", "*=", "/="}, strings.TrimSpace(string(line[i:i+3]))) {
 						var mathCapture string
-
-						mathCapture += string(line[i-1])
+						mathCapture += temp
 
 						for i < len(line) {
 							crnt := string(line[i])
@@ -388,19 +391,40 @@ func Lexer(filename interface{}, givenLines []string) []map[string]interface{} {
 			// Switch statement for the single employeed bums
 			switch string(char) {
 			case "[":
+				i++
+				var rawElements string
+
+				for i < len(line) {
+					if string(line[i]) == "," {
+						i++
+						continue
+					}
+
+					if string(line[i]) == "]" {
+						break
+					}
+
+					rawElements += string(line[i])
+					i++
+				}
+
+				orderBody := Lexer(nil, sliceOfRegex(rawElements, `(\"(?:\\.|[^\"\\])*\"|[\d|\.]+|(true|false)|\[.+\]|\'[A-Za-z]\'|\w+)`), false)
+
 				allTokens = append(allTokens, map[string]interface{}{
-					"TYPE": "LBRACKET",
-					"VAL":  string(char),
-					"LINE": index + 1,
-				})
-				continue
-			case "]":
-				allTokens = append(allTokens, map[string]interface{}{
-					"TYPE": "RBRACKET",
-					"VAL":  string(char),
+					"TYPE": "ORDER",
+					"VAL":  orderBody,
 					"LINE": index + 1,
 				})
 
+				continue
+			case "]":
+				/*
+					allTokens = append(allTokens, map[string]interface{}{
+						"TYPE": "RBRACKET",
+						"VAL":  string(char),
+						"LINE": index + 1,
+					})
+				*/
 				continue
 			case "'":
 				if i+1 < len(line) && string(line[i+2]) == "'" {
@@ -429,26 +453,16 @@ func Lexer(filename interface{}, givenLines []string) []map[string]interface{} {
 				index++
 				var rawLines []string
 				var toks []map[string]interface{}
-				var depth int = 0
 
 				for index < len(lines) {
-					if cmpRegEx(strings.TrimSpace(lines[index]), `.+\s\{`) {
-						depth++
-					}
-
 					if cmpRegEx(strings.TrimSpace(lines[index]), `\}\s+(((else\s|or\s)if)|else).+\{`) || strings.TrimSpace(lines[index]) == "}" {
-						if depth >= 1 {
-							depth--
-						} else {
-							break
-						}
+						break
 					}
 
 					rawLines = append(rawLines, strings.TrimSpace(lines[index]))
 					index++
 				}
-
-				toks = Lexer(nil, rawLines)
+				toks = Lexer(nil, rawLines, true)
 
 				allTokens = append(allTokens, map[string]interface{}{
 					"TYPE": "BODY",
@@ -553,7 +567,7 @@ func Lexer(filename interface{}, givenLines []string) []map[string]interface{} {
 
 		if len(allTokens) > 0 {
 			last := allTokens[len(allTokens)-1]
-			if !(Contains([]interface{}{"SYMBOL", "LCURL", "RCURL", "OPERATOR"}, last["TYPE"]) || Contains([]interface{}{";", "{", "}", "="}, last["VAL"])) {
+			if !(Contains([]interface{}{"SYMBOL", "LCURL", "RCURL", "OPERATOR"}, last["TYPE"]) || Contains([]interface{}{";", "{", "}", "="}, last["VAL"])) && appendSemi {
 				allTokens = append(allTokens, map[string]interface{}{
 					"TYPE": "SYMBOL",
 					"VAL":  ";",

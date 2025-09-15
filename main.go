@@ -42,10 +42,10 @@ func main() {
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			filename := args[0]
-			Lexer(filename, nil)
-			//Parser(nil)
-			//Validator(nil)
-			//Interpreter(nil)
+			Lexer(filename, nil, true)
+			Parser(nil)
+			//Validator(nil, nil)
+			Interpreter(nil, nil)
 		},
 	}
 
@@ -53,7 +53,6 @@ func main() {
 		Use:   "test",
 		Short: "Test stuff",
 		Run: func(cmd *cobra.Command, args []string) {
-
 		},
 	}
 

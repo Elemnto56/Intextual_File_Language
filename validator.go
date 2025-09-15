@@ -12,9 +12,7 @@ import (
 	"github.com/expr-lang/expr"
 )
 
-var ValidatorVariables = make(map[string]interface{})
-
-func Validator(givenNodes []map[string]interface{}) {
+func Validator(givenNodes []map[string]interface{}, setVars map[string]interface{}) {
 	// Take in AST.json
 	b, _ := os.ReadFile("./.intext/cache/AST.json")
 	nodes := []map[string]interface{}{}
@@ -22,7 +20,8 @@ func Validator(givenNodes []map[string]interface{}) {
 	Check(err)
 
 	// Func Globals
-	macroLookUp := make(map[string]interface{})
+	macroLookUp := make(map[string]map[string]interface{})
+	ValidatorVariables := make(map[string]interface{})
 
 	// Regexs
 	pat0 := `((write|read|append|input)\((|.+)\)|declare|ouput|[\+|\-|\*|\\|\+\=|\-\=|\\\=|\*\=])`
@@ -32,6 +31,10 @@ func Validator(givenNodes []map[string]interface{}) {
 
 	if givenNodes != nil {
 		nodes = givenNodes
+	}
+
+	if setVars != nil {
+		ValidatorVariables = setVars
 	}
 
 	for _, node := range nodes {
@@ -160,19 +163,22 @@ func Validator(givenNodes []map[string]interface{}) {
 				}
 			}
 		case "declare":
-			expect := len(node["vars"].([]interface{}))
-			meta := node["meta"].(map[string]interface{})
-			line, _ := strconv.Atoi(fmt.Sprint(node["line"]))
+			/*
+				expect := len(node["vars"].([]interface{}))
+				meta := node["meta"].(map[string]interface{})
+				line, _ := strconv.Atoi(fmt.Sprint(node["line"]))
 
-			if _, ok := macroLookUp[fmt.Sprint(meta["macro-name"])]; !ok {
-				err := NewError("TBD", line, fmt.Sprintf("declare ... = %s???%s()", Red, Reset), "The called function does not exist", true, "Check your code, and make sure you declared the macro")
-				err.Throw()
-			} else {
-				if expect != macroLookUp[fmt.Sprint(meta["macro-name"])] {
-					err := NewError("TBD", line, fmt.Sprint("declare ... = %v(%s???%s)", meta["macro-name"], Red, Reset), fmt.Sprintf("The macro expected %v args, but was given %v args", macroLookUp[fmt.Sprint(meta["macro-name"])], expect), true, "")
+				if _, ok := macroLookUp[fmt.Sprint(meta["macro-name"])]; !ok {
+					err := NewError("TBD", line, fmt.Sprintf("declare ... = %s???%s()", Red, Reset), "The called function does not exist", true, "Check your code, and make sure you declared the macro")
 					err.Throw()
+				} else {
+					if expect != macroLookUp[fmt.Sprint(meta["macro-name"])] {
+						err := NewError("TBD", line, fmt.Sprint("declare ... = %v(%s???%s)", meta["macro-name"], Red, Reset), fmt.Sprintf("The macro expected %v args, but was given %v args", macroLookUp[fmt.Sprint(meta["macro-name"])], expect), true, "")
+						err.Throw()
+					}
 				}
-			}
+			*/
+			continue
 		case "output":
 			value := node["value"]
 			metadata := node["meta"].(map[string]interface{})
@@ -257,7 +263,7 @@ func Validator(givenNodes []map[string]interface{}) {
 					captureAST = append(captureAST, element.(map[string]interface{}))
 				}
 
-				Validator(captureAST)
+				Validator(captureAST, nil)
 			case "repeat":
 				body := node["body"].([]interface{})
 				itr := meta["iterator_var"]
@@ -271,7 +277,7 @@ func Validator(givenNodes []map[string]interface{}) {
 					captureAST = append(captureAST, element.(map[string]interface{}))
 				}
 
-				Validator(captureAST)
+				Validator(captureAST, nil)
 			}
 		case "expr":
 			meta := node["meta"].(map[string]interface{})
@@ -285,18 +291,22 @@ func Validator(givenNodes []map[string]interface{}) {
 			}
 		case "macro":
 			meta := node["meta"].(map[string]interface{})
+			name := fmt.Sprint(node["name"])
 
-			if meta["macro-type"] == "declaration" {
-				body := node["body"].([]interface{})
-				astBody := []map[string]interface{}{}
+			switch meta["macro-type"] {
+			case "declaration":
+				macroLookUp[name] = map[string]interface{}{"return-len": len(meta["returns"].([]interface{})), "param-len": len(meta["param"].(map[string]interface{})), "call-len": len(meta["call"].(map[string]interface{}))}
+			case "standalone":
+				args := meta["args"]
+				currentMac := macroLookUp[name]
 
-				for _, element := range body {
-					astBody = append(astBody, element.(map[string]interface{}))
+				if args != nil {
+					args := args.([]interface{})
+					if a, _ := strconv.Atoi(fmt.Sprint(currentMac["param-len"])); len(args) > a {
+						err := NewError("RangeException", inte, fmt.Sprintf("%v(... [%s%v%s > %v] ...)", name, Red, len(args), Reset, a), "The amount of arguements given did not respect the amount to be recieved", true, "")
+						err.Throw()
+					}
 				}
-
-				Validator(astBody)
-
-				macroLookUp[fmt.Sprint(node["name"])] = len(meta["returns"].([]interface{}))
 			}
 		}
 	}

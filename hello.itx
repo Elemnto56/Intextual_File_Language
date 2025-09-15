@@ -1,5 +1,8 @@
-macro . greet(x: string) {
-    output x
+let x: int = 5
+output x
+if x == 5 {
+    output "Yep"
+    let x: int = 10
 }
 
-greet("Hey", 2, true, 2.22, 'A', ["New", "last"])
+output x

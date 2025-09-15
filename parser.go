@@ -67,7 +67,7 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 							if token.Type == "OPERATOR" && token.Val == "=" {
 								advance(&index)
 								token := current(&index, tokens)
-								if Contains([]interface{}{"INT", "BOOL", "STRING", "CHAR", "ORD", "IDENTIFIER", "TXT BLK"}, token.Type) {
+								if Contains([]interface{}{"INT", "BOOL", "STRING", "CHAR", "IDENTIFIER", "TXT BLK"}, token.Type) {
 									value := token.Val
 									_type := token.Type
 									meta["raw_type"] = _type
@@ -138,59 +138,26 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 										err := NewError("MissingBreaker", token.Line, fmt.Sprintf("%v %v: %v = %v <-", "let", name, Type, value), "This line is missing a semicolon", true, "")
 										err.Throw()
 									}
-								} else if token.Type == "LBRACKET" {
-									advance(&index)
-									token := current(&index, tokens)
-									userList := []interface{}{} // Make list for order
+								} else if token.Type == "ORDER" {
+									tokenList := token.Val.([]interface{})
+									var orderList []map[string]interface{}
 
-									userList = append(userList, token.Val) // Put in current token
-									VarRef := make(map[string]interface{})
-
-									var tempIndex int = 0
-									advance(&index)
-									for {
-										token = current(&index, tokens)
-
-										if Contains([]interface{}{"STRING", "INT", "BOOL", "FLOAT", "CHAR"}, token.Type) {
-											userList = append(userList, token.Val)
-											tempIndex += 1
-											advance(&index)
-											continue
-										}
-
-										if token.Type == "IDENTIFIER" {
-											userList = append(userList, token.Val)
-											tempIndex += 1
-											VarRef[fmt.Sprint(token.Val)] = tempIndex
-											advance(&index)
-											continue
-										}
-
-										if token.Type == "COMMA" {
-											advance(&index)
-											continue
-										}
-
-										if token.Type == "RBRACKET" {
-											break
-										}
+									for _, element := range tokenList {
+										newEle := element.(map[string]interface{})
+										orderList = append(orderList, map[string]interface{}{"val": newEle["VAL"], "type": newEle["TYPE"]})
 									}
 
-									if token.Type == "RBRACKET" {
-										meta["raw_type"] = "ORDER"
-										meta["math"] = false
-										meta["ord-ref"] = VarRef
-										meta["assignment-type"] = "basic"
-										ast = append(ast, map[string]interface{}{
-											"type":      "let",
-											"var_type":  Type,
-											"var_name":  name,
-											"var_value": userList,
-											"line":      token.Line,
-											"meta":      meta,
-										})
-										advance(&index)
-									}
+									meta["raw_type"] = "ORDER"
+									meta["math"] = false
+									meta["assignment-type"] = "basic"
+									ast = append(ast, map[string]interface{}{
+										"type":      "let",
+										"var_type":  Type,
+										"var_name":  name,
+										"var_value": orderList,
+										"line":      token.Line,
+										"meta":      meta,
+									})
 								} else if token.Type == "FUNC" {
 									switch token.Val {
 									case "read":
@@ -353,22 +320,41 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 				advance(&index)
 				token := current(&index, tokens)
 				if true { // Added this here because the value is ambiguous
-					meta := make(map[string]string)
+					meta := make(map[string]interface{})
 					_type := token.Type
 					val := token.Val
 
 					temp := index + 1
-					if current(&temp, tokens).Type == "SYMBOL" && current(&temp, tokens).Val == ";" {
+					if tokens[temp].Type == "SYMBOL" && tokens[temp].Val == ";" {
 						switch token.Type {
-						case "STRING", "INT", "BOOL", "FLOAT", "ORD", "CHAR", "IDENTIFIER":
-							meta["raw_type"] = _type
-							meta["print_type"] = "simple"
-							ast = append(ast, map[string]interface{}{
-								"type":  "output",
-								"value": val,
-								"meta":  meta,
-								"line":  token.Line,
-							})
+						case "STRING", "INT", "BOOL", "FLOAT", "CHAR", "IDENTIFIER":
+							if cmpRegEx(fmt.Sprint(val), `^([A-Za-z]+\_*?)+\[([0-9]+|\w)\]`) {
+								rawIndext := fmt.Sprint(val)
+
+								a := strings.IndexRune(rawIndext, '[')
+								b := strings.IndexRune(rawIndext, ']')
+
+								vari := rawIndext[:a]
+								num := rawIndext[a+1 : b]
+
+								meta["print_type"] = "ord_index"
+								meta["raw_type"] = "none"
+								ast = append(ast, map[string]interface{}{
+									"type":  "output",
+									"line":  token.Line,
+									"meta":  meta,
+									"value": map[string]interface{}{vari: num},
+								})
+							} else {
+								meta["raw_type"] = _type
+								meta["print_type"] = "simple"
+								ast = append(ast, map[string]interface{}{
+									"type":  "output",
+									"value": val,
+									"meta":  meta,
+									"line":  token.Line,
+								})
+							}
 						case "MATH":
 							meta["print_type"] = "mathematics"
 							meta["raw_type"] = "none"
@@ -378,23 +364,25 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 								"meta":  meta,
 								"line":  token.Line,
 							})
+						case "ORDER":
+							tokenList := token.Val.([]interface{})
+							var orderList []map[string]interface{}
+
+							for _, element := range tokenList {
+								forUse := element.(map[string]interface{})
+								orderList = append(orderList, map[string]interface{}{"val": forUse["VAL"], "type": forUse["TYPE"]})
+							}
+
+							meta["print_type"] = "order"
+							meta["raw_type"] = "none"
+							ast = append(ast, map[string]interface{}{
+								"type":  "output",
+								"value": orderList,
+								"meta":  meta,
+								"line":  token.Line,
+							})
 						}
-					} else if current(&temp, tokens).Type == "LBRACKET" {
-						advance(&index)
-						advance(&index)
-						token := current(&index, tokens)
-
-						idx := token.Val
-
-						meta["print_type"] = "ord_index"
-						meta["raw_type"] = "none"
-						ast = append(ast, map[string]interface{}{
-							"type":  "output",
-							"value": map[string]interface{}{fmt.Sprint(val): idx},
-							"meta":  meta,
-							"line":  token.Line,
-						})
-					} else if (current(&temp, tokens).Type == "SYMBOL" || current(&temp, tokens).Type == "COMMA") && current(&temp, tokens).Val == "," {
+					} else if (tokens[temp].Type == "SYMBOL" || tokens[temp].Type == "COMMA") && tokens[temp].Val == "," {
 						spagList := []interface{}{}
 						spagList = append(spagList, val) // Add the first val into the list; none left behind!
 						advance(&index)
@@ -781,8 +769,68 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 						err.Throw()
 					}
 				case "=":
-					err := NewError("PKGError", token.Line, fmt.Sprintf("%v = ...", exprVal), "The \"expression\" pkg was not included", true, "Upgrade to v0.9!")
-					err.Throw()
+					continue // TODO: I'll do it later ngl
+					advance(&index)
+					token = current(&index, tokens)
+
+					temp := index + 1 // Did this in order for it to be a sight into the future
+					if current(&temp, tokens).Type == "SYMBOL" && current(&temp, tokens).Val == ";" {
+						ast = append(ast, map[string]interface{}{
+							"type":      "reassign",
+							"var_name":  exprVal,
+							"var_value": token.Val,
+							"line":      token.Line,
+							"meta":      meta,
+						})
+						advance(&index)
+					} else if (current(&temp, tokens).Type == "OPERATOR" && current(&temp, tokens).Val == "+") || (current(&temp, tokens).Type == "SYMBOL" && current(&temp, tokens).Val == ",") {
+						first := current(&index, tokens).Val
+						advance(&index)
+						token := current(&index, tokens)
+						concatCatch := []interface{}{}
+
+						concatCatch = append(concatCatch, fmt.Sprint(first))
+
+						for {
+							if token.Type == "SYMBOL" && token.Val == ";" {
+								break
+							}
+
+							if (token.Type == "SYMBOL" && token.Val == ",") || (token.Type == "OPERATOR" && token.Val == "+") {
+								advance(&index)
+								token = current(&index, tokens)
+								continue
+							}
+
+							concatCatch = append(concatCatch, fmt.Sprint(token.Val))
+							advance(&index)
+							token = current(&index, tokens)
+						}
+
+						if token.Type == "SYMBOL" && token.Val == ";" {
+							ast = append(ast, map[string]interface{}{
+								"type":      "reassign",
+								"var_name":  exprVal,
+								"var_value": concatCatch,
+								"line":      token.Line,
+								"meta":      meta,
+							})
+						}
+					} else {
+						err := NewError("MissingBreaker", token.Line, fmt.Sprintf("%v = %v <-", exprVal, token.Val), "This line is missing a semicolon", true, "")
+						err.Throw()
+					}
+
+					switch token.Type {
+					case "MATH":
+
+					case "FUNC":
+						advance(&index)
+						advance(&index)
+						token = current(&index, tokens)
+						fmt.Println(token)
+						os.Exit(0)
+					}
 
 				}
 			}
@@ -844,7 +892,6 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 						"name": name,
 						"body": astBody,
 					})
-					advance(&index)
 				} else {
 					err := NewError("MalformedSyntax", macLine, fmt.Sprintf("macro ... %v ... %s???%s", name, Red, Reset), "This macro declaration is missing either a left-standing curly brace, or right-standing curly brace", true, "")
 					err.Throw()
@@ -854,7 +901,22 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 				name := token.Meta["name"]
 
 				if len(args) != 0 {
+					var capture []interface{}
 
+					for _, element := range args {
+						forUse := element.(map[string]interface{})
+						capture = append(capture, map[string]interface{}{"type": forUse["TYPE"], "val": forUse["VAL"]})
+					}
+
+					meta["macro-type"] = "standalone"
+					meta["args"] = capture
+					ast = append(ast, map[string]interface{}{
+						"type": "macro",
+						"meta": meta,
+						"line": macLine,
+						"name": name,
+					})
+					advance(&index)
 				} else {
 					meta["macro-type"] = "standalone"
 					meta["args"] = nil

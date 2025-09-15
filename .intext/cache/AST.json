@@ -1,5 +1,26 @@
 [
   {
+    "line": 1,
+    "meta": {
+      "assignment-type": "basic",
+      "math": false,
+      "raw_type": "INT"
+    },
+    "type": "let",
+    "var_name": "x",
+    "var_type": "int",
+    "var_value": 5
+  },
+  {
+    "line": 2,
+    "meta": {
+      "print_type": "simple",
+      "raw_type": "IDENTIFIER"
+    },
+    "type": "output",
+    "value": "x"
+  },
+  {
     "body": [
       {
         "line": 1,
@@ -8,35 +29,36 @@
           "raw_type": "STRING"
         },
         "type": "output",
-        "value": "Hello World!"
+        "value": "Yep"
+      },
+      {
+        "line": 2,
+        "meta": {
+          "assignment-type": "basic",
+          "math": false,
+          "raw_type": "INT"
+        },
+        "type": "let",
+        "var_name": "x",
+        "var_type": "int",
+        "var_value": 10
       }
     ],
-    "line": 1,
+    "condition": "x == 5",
+    "line": 3,
     "meta": {
-      "call": {},
-      "macro-type": "declaration",
-      "param": {},
-      "returns": []
+      "UUID": 0,
+      "sub_type": "if"
     },
-    "name": "greet",
-    "type": "macro"
+    "type": "logic"
   },
   {
-    "line": 5,
+    "line": 8,
     "meta": {
-      "args": null,
-      "macro-type": "standalone"
+      "print_type": "simple",
+      "raw_type": "IDENTIFIER"
     },
-    "name": "greet",
-    "type": "macro"
-  },
-  {
-    "line": 6,
-    "meta": {
-      "args": null,
-      "macro-type": "standalone"
-    },
-    "name": "greet",
-    "type": "macro"
+    "type": "output",
+    "value": "x"
   }
 ]

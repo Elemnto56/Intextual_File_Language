@@ -12,23 +12,24 @@ import (
 )
 
 // Globals
+type MarcoDef struct {
+	calls      map[string]interface{}
+	parameters map[string]interface{}
+	returns    []interface{}
+	body       []map[string]interface{}
+}
+
 var isBinary bool
 var pat2 string = `^([A-Za-z]+\_*?)+\[([0-9]+|\w)\];?$`
 var re2 *regexp.Regexp = regexp.MustCompile(pat2)
-var InterpreterVariables = make(map[string]interface{})
 var breakFlag bool = false
 var contFlag bool = false
+var macroTable = make(map[string]MarcoDef)
 
-func Interpreter(givenNodes []map[string]interface{}) {
-	//Func Globals
+func Interpreter(givenNodes []map[string]interface{}, setVars map[string]interface{}) {
+	// Func Globals
 	var uuid int = 0
-	type MarcoDef struct {
-		calls      map[string]interface{}
-		parameters map[string]interface{}
-		returns    []interface{}
-		body       []map[string]interface{}
-	}
-	macroTable := make(map[string]MarcoDef)
+	var InterpreterVariables = make(map[string]interface{})
 
 	// Grab AST
 	bytes, _ := os.ReadFile("./.intext/cache/AST.json")
@@ -39,10 +40,15 @@ func Interpreter(givenNodes []map[string]interface{}) {
 	if givenNodes != nil {
 		nodes = givenNodes
 	}
+	for key, value := range setVars {
+		InterpreterVariables[key] = value
+	}
 
 	// Iterate through each node
 	for index := 0; index < len(nodes); index++ {
 		node := nodes[index]
+		line, _ := strconv.Atoi(fmt.Sprint(node["line"]))
+
 		rawUUID := node["meta"]
 		if rawUUID != nil {
 			uuid, _ = strconv.Atoi(fmt.Sprint(rawUUID.(map[string]interface{})["UUID"]))
@@ -118,18 +124,22 @@ func Interpreter(givenNodes []map[string]interface{}) {
 					InterpreterVariables[name] = val
 				case "order", "ord":
 					valList := val.([]interface{})
+					var capture []interface{}
 
-					for i, element := range valList {
-						if _, ok := InterpreterVariables[fmt.Sprint(element)]; ok {
-							value := InterpreterVariables[fmt.Sprint(element)]
-
-							valList[i] = value
+					for _, element := range valList {
+						forUse := element.(map[string]interface{})
+						if forUse["type"] == "IDENTIFIER" {
+							a := InterpreterVariables[fmt.Sprint(forUse["val"])]
+							capture = append(capture, a)
+						} else {
+							capture = append(capture, forUse["val"])
 						}
 					}
 
-					InterpreterVariables[name] = valList
+					InterpreterVariables[name] = capture
 				}
 			}
+
 		case "declare":
 			// TODO: Add macro giving return values `declare x = myMacro()`.
 			// Also, add standalone macro calls, and variable macro calls (x.myMacro())
@@ -169,7 +179,6 @@ func Interpreter(givenNodes []map[string]interface{}) {
 				}
 			case "mixed":
 				SpagList := []interface{}{}
-				var catch string
 
 				for _, SpagVal := range value.([]interface{}) {
 					switch SpagVal := SpagVal.(type) {
@@ -178,28 +187,37 @@ func Interpreter(givenNodes []map[string]interface{}) {
 						if ok {
 							SpagList = append(SpagList, vari)
 						} else {
-							if re2.MatchString(SpagVal) {
+							if re2.MatchString(SpagVal) { // Order index check
 								val, _ := expr.Eval(SpagVal, InterpreterVariables)
 								SpagList = append(SpagList, NullCheck(val, false))
 							} else {
 								SpagList = append(SpagList, SpagVal)
 							}
 						}
+					case []interface{}:
+						var capture []interface{}
+						for _, element := range SpagVal {
+							forUse := element.(map[string]interface{})
+							if forUse["TYPE"] == "IDENTIFIER" {
+								a := InterpreterVariables[fmt.Sprint(forUse["VAL"])]
+								capture = append(capture, a)
+							} else {
+								capture = append(capture, forUse["VAL"])
+							}
+						}
+						SpagList = append(SpagList, capture)
 					default:
 						SpagList = append(SpagList, SpagVal)
 					}
 				}
 
 				for _, i := range SpagList {
-					catch += fmt.Sprint(i)
+					fmt.Print(i)
 				}
-
-				fmt.Println(catch)
+				fmt.Println()
 			case "mathematics":
 				val := fmt.Sprint(value)
-				cmp, errd := expr.Compile(val)
-				Check(errd)
-				ans, err := expr.Run(cmp, InterpreterVariables)
+				ans, err := expr.Eval(val, InterpreterVariables)
 				if err != nil {
 					fmt.Println(err)
 				}
@@ -282,13 +300,12 @@ func Interpreter(givenNodes []map[string]interface{}) {
 					if i, _ := strconv.Atoi(fmt.Sprint(meta["UUID"])); i == uuid {
 						index++
 					}
-					Interpreter(captureAST)
+					Interpreter(captureAST, nil)
 					if i, _ := strconv.Atoi(fmt.Sprint(meta["UUID"])); i == uuid {
 						index++
-						continue
 					}
 				}
-
+				fmt.Println(nodes[index])
 			case "while":
 				cond := fmt.Sprint(node["condition"])
 				body := node["body"].([]interface{})
@@ -305,19 +322,19 @@ func Interpreter(givenNodes []map[string]interface{}) {
 				for logic { // Updates logicd
 					if contFlag {
 						contFlag = false
-						Interpreter(whileCapture)
+						Interpreter(whileCapture, nil)
 						continue
 					}
 
 					if breakFlag {
 						breakFlag = false
-						Interpreter(whileCapture)
+						Interpreter(whileCapture, nil)
 						break
 					}
 
 					rawLogic, _ = expr.Eval(cond, InterpreterVariables)
 					logic, _ = strconv.ParseBool(strings.TrimSpace(fmt.Sprint(rawLogic)))
-					Interpreter(whileCapture)
+					Interpreter(whileCapture, nil)
 				}
 			case "repeat":
 				rawItr := meta["iterator_var"]
@@ -341,7 +358,7 @@ func Interpreter(givenNodes []map[string]interface{}) {
 
 						if contFlag {
 							contFlag = false
-							Interpreter(repeatCapture)
+							Interpreter(repeatCapture, nil)
 							continue inner
 						}
 
@@ -349,13 +366,13 @@ func Interpreter(givenNodes []map[string]interface{}) {
 							breakFlag = false
 							break
 						}
-						Interpreter(repeatCapture)
+						Interpreter(repeatCapture, nil)
 					}
 				} else if rawItr == nil {
 					for i := 0; i < times; i++ {
 						if contFlag {
 							contFlag = false
-							Interpreter(repeatCapture)
+							Interpreter(repeatCapture, nil)
 							continue
 						}
 
@@ -364,7 +381,7 @@ func Interpreter(givenNodes []map[string]interface{}) {
 							break
 						}
 
-						Interpreter(repeatCapture)
+						Interpreter(repeatCapture, nil)
 					}
 				}
 			}
@@ -457,10 +474,71 @@ func Interpreter(givenNodes []map[string]interface{}) {
 				}
 
 			case "standalone":
-				if _, ok := macroTable[fmt.Sprint(node["name"])]; meta["args"] == nil && ok {
-					mac := macroTable[fmt.Sprint(node["name"])]
+				args := meta["args"]
+				name := fmt.Sprint(node["name"])
+				macroVars := map[string]interface{}{"L": 2}
 
-					Interpreter(mac.body)
+				if _, ok := macroTable[name]; ok {
+					if args == nil {
+						mac := macroTable[name]
+
+						Interpreter(mac.body, macroVars)
+					} else {
+						args := args.([]interface{})
+						calledMacro := macroTable[name]
+
+						for topIndex, topElement := range args {
+							topUse := topElement.(map[string]interface{})
+							if topUse["type"] == "ORDER" {
+								for lowerIndex, lowerElement := range topUse["val"].([]interface{}) {
+									lowerUSe := lowerElement.(map[string]interface{})
+
+									if lowerUSe["TYPE"] == "IDENTIFIER" {
+										if a, ok := InterpreterVariables[fmt.Sprint(lowerUSe["VAL"])]; ok {
+											topUse["val"].([]interface{})[lowerIndex] = a
+										} else {
+											err := NewError("VariableNotFound", line, fmt.Sprintf("%v(... [... %s%v%s ...] ...)", name, Red, lowerUSe["VAL"], Reset), "The variable inside this order was not found", true, "")
+											err.Throw()
+										}
+									}
+								}
+							}
+
+							if topUse["type"] == "IDENTIFIER" {
+								if a, ok := InterpreterVariables[fmt.Sprint(topUse["val"])]; ok {
+									args[topIndex] = a
+								} else {
+									err := NewError("VariableNotFound", line, fmt.Sprintf("%v(... %s%v%s ...)", name, Red, topUse["VAL"], Reset), "The variable inside this macro call was not found", true, "")
+									err.Throw()
+								}
+							}
+						}
+
+						var count int = 0
+						for paramName, expectedType := range calledMacro.parameters {
+							if fmt.Sprint(expectedType) == strings.ToLower(fmt.Sprint(args[count].(map[string]interface{})["type"])) {
+								macroVars[paramName] = args[count].(map[string]interface{})["val"]
+							} else {
+								err := NewError("TypeMismatch", line, fmt.Sprintf("%v(... %s%v%s(%v) ...) -> %v(%s%v%s)",
+									name,
+									Red,
+									strings.ToLower(fmt.Sprint(args[count].(map[string]interface{})["type"])),
+									Reset,
+									fmt.Sprint(args[count].(map[string]interface{})["val"]),
+									name,
+									Green,
+									expectedType,
+									Reset,
+								), "A data type of a value given during the macro call was unexpected", true, "")
+								err.Throw()
+							}
+
+							count++
+						}
+
+						Validator(calledMacro.body, macroVars)
+						Interpreter(calledMacro.body, macroVars)
+					}
 				}
 			}
 		}
