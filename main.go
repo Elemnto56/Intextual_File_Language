@@ -44,7 +44,7 @@ func main() {
 			filename := args[0]
 			Lexer(filename, nil, true)
 			Parser(nil)
-			//Validator(nil, nil)
+			//Validator(nil, nil) UPDATE WHEN CAN
 			Interpreter(nil, nil)
 		},
 	}
@@ -53,6 +53,9 @@ func main() {
 		Use:   "test",
 		Short: "Test stuff",
 		Run: func(cmd *cobra.Command, args []string) {
+			a, err := EvaluateExpression(`"he"`, nil)
+			Check(err)
+			fmt.Println(a)
 		},
 	}
 

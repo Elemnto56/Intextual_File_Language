@@ -20,16 +20,17 @@ type MarcoDef struct {
 }
 
 var isBinary bool
-var pat2 string = `^([A-Za-z]+\_*?)+\[([0-9]+|\w)\];?$`
+var pat2 string = `^([A-Za-z]+\_*?)+\[([0-9]+|\w)\];?$` // For order indexes (i.e. x[2])
 var re2 *regexp.Regexp = regexp.MustCompile(pat2)
 var breakFlag bool = false
 var contFlag bool = false
+var BackupVariables = make(map[string]interface{}) // Might use for later things?
 var macroTable = make(map[string]MarcoDef)
 
-func Interpreter(givenNodes []map[string]interface{}, setVars map[string]interface{}) {
+func Interpreter(givenNodes []map[string]interface{}, InterpreterVariables map[string]interface{}) {
 	// Func Globals
 	var uuid int = 0
-	var InterpreterVariables = make(map[string]interface{})
+	MacroVariables := make(map[string]interface{})
 
 	// Grab AST
 	bytes, _ := os.ReadFile("./.intext/cache/AST.json")
@@ -40,8 +41,9 @@ func Interpreter(givenNodes []map[string]interface{}, setVars map[string]interfa
 	if givenNodes != nil {
 		nodes = givenNodes
 	}
-	for key, value := range setVars {
-		InterpreterVariables[key] = value
+
+	if InterpreterVariables == nil {
+		InterpreterVariables = BackupVariables
 	}
 
 	// Iterate through each node
@@ -217,7 +219,7 @@ func Interpreter(givenNodes []map[string]interface{}, setVars map[string]interfa
 				fmt.Println()
 			case "mathematics":
 				val := fmt.Sprint(value)
-				ans, err := expr.Eval(val, InterpreterVariables)
+				ans, err := EvaluateExpression(val, InterpreterVariables)
 				if err != nil {
 					fmt.Println(err)
 				}
@@ -287,7 +289,8 @@ func Interpreter(givenNodes []map[string]interface{}, setVars map[string]interfa
 				meta["UUID"] = uuid
 
 				cond := fmt.Sprint(node["condition"])
-				val, _ := expr.Eval(cond, InterpreterVariables)
+				val, err := EvaluateExpression(cond, InterpreterVariables)
+				Check(err)
 				captureAST := []map[string]interface{}{}
 
 				for _, element := range body {
@@ -305,7 +308,7 @@ func Interpreter(givenNodes []map[string]interface{}, setVars map[string]interfa
 						index++
 					}
 				}
-				fmt.Println(nodes[index])
+				index -= 2
 			case "while":
 				cond := fmt.Sprint(node["condition"])
 				body := node["body"].([]interface{})
@@ -316,10 +319,11 @@ func Interpreter(givenNodes []map[string]interface{}, setVars map[string]interfa
 					whileCapture = append(whileCapture, element.(map[string]interface{}))
 				}
 
-				rawLogic, _ := expr.Eval(cond, InterpreterVariables)
+				rawLogic, err := EvaluateExpression(cond, InterpreterVariables)
+				Check(err)
 				logic, _ := strconv.ParseBool(strings.TrimSpace(fmt.Sprint(rawLogic)))
 
-				for logic { // Updates logicd
+				for logic { // Updates logic
 					if contFlag {
 						contFlag = false
 						Interpreter(whileCapture, nil)
@@ -332,7 +336,8 @@ func Interpreter(givenNodes []map[string]interface{}, setVars map[string]interfa
 						break
 					}
 
-					rawLogic, _ = expr.Eval(cond, InterpreterVariables)
+					rawLogic, err = EvaluateExpression(cond, InterpreterVariables)
+					Check(err)
 					logic, _ = strconv.ParseBool(strings.TrimSpace(fmt.Sprint(rawLogic)))
 					Interpreter(whileCapture, nil)
 				}
@@ -341,7 +346,7 @@ func Interpreter(givenNodes []map[string]interface{}, setVars map[string]interfa
 				itr := fmt.Sprint(rawItr)
 
 				rawTimes := fmt.Sprint(meta["times"])
-				rawTimesTwo, _ := expr.Eval(rawTimes, InterpreterVariables) // Incase math is present
+				rawTimesTwo, _ := EvaluateExpression(rawTimes, InterpreterVariables) // Incase math is present
 				times, err := strconv.Atoi(fmt.Sprint(rawTimesTwo))
 				Check(err)
 
@@ -432,11 +437,12 @@ func Interpreter(givenNodes []map[string]interface{}, setVars map[string]interfa
 				switch incrType {
 				case "+=":
 					if strCheck {
-						val, _ := expr.Eval(fmt.Sprintf("\"%s\" + \"%s\"", fmt.Sprint(target), fmt.Sprint(newValue)), InterpreterVariables)
+						val, err := EvaluateExpression(fmt.Sprintf("\"%s\" + \"%s\"", fmt.Sprint(target), fmt.Sprint(newValue)), InterpreterVariables)
+						Check(err)
 						InterpreterVariables[rawTarget] = val
 					} else {
-
-						val, _ := expr.Eval(fmt.Sprintf("%v + %v", target, newValue), InterpreterVariables)
+						val, err := EvaluateExpression(fmt.Sprintf("%v + %v", target, newValue), InterpreterVariables)
+						Check(err)
 						InterpreterVariables[rawTarget] = val
 					}
 				case "-=":
@@ -452,6 +458,13 @@ func Interpreter(givenNodes []map[string]interface{}, setVars map[string]interfa
 
 					InterpreterVariables[rawTarget] = val
 				}
+			case "reassign":
+				target := fmt.Sprint(meta["target"])
+				value := fmt.Sprint(meta["value"])
+
+				evald, err := EvaluateExpression(value, InterpreterVariables)
+				Check(err)
+				InterpreterVariables[target] = evald
 			}
 
 		case "macro":
@@ -476,13 +489,12 @@ func Interpreter(givenNodes []map[string]interface{}, setVars map[string]interfa
 			case "standalone":
 				args := meta["args"]
 				name := fmt.Sprint(node["name"])
-				macroVars := map[string]interface{}{"L": 2}
 
 				if _, ok := macroTable[name]; ok {
 					if args == nil {
 						mac := macroTable[name]
 
-						Interpreter(mac.body, macroVars)
+						Interpreter(mac.body, MacroVariables)
 					} else {
 						args := args.([]interface{})
 						calledMacro := macroTable[name]
@@ -517,7 +529,7 @@ func Interpreter(givenNodes []map[string]interface{}, setVars map[string]interfa
 						var count int = 0
 						for paramName, expectedType := range calledMacro.parameters {
 							if fmt.Sprint(expectedType) == strings.ToLower(fmt.Sprint(args[count].(map[string]interface{})["type"])) {
-								macroVars[paramName] = args[count].(map[string]interface{})["val"]
+								MacroVariables[paramName] = args[count].(map[string]interface{})["val"]
 							} else {
 								err := NewError("TypeMismatch", line, fmt.Sprintf("%v(... %s%v%s(%v) ...) -> %v(%s%v%s)",
 									name,
@@ -536,11 +548,12 @@ func Interpreter(givenNodes []map[string]interface{}, setVars map[string]interfa
 							count++
 						}
 
-						Validator(calledMacro.body, macroVars)
-						Interpreter(calledMacro.body, macroVars)
+						Validator(calledMacro.body, MacroVariables)
+						Interpreter(calledMacro.body, MacroVariables)
 					}
 				}
 			}
 		}
 	}
+
 }

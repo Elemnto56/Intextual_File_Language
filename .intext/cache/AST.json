@@ -2,58 +2,14 @@
   {
     "line": 1,
     "meta": {
-      "assignment-type": "basic",
-      "math": false,
-      "raw_type": "INT"
+      "target": "x",
+      "value": "2 + 1"
     },
-    "type": "let",
-    "var_name": "x",
-    "var_type": "int",
-    "var_value": 5
+    "sub_type": "reassign",
+    "type": "expr"
   },
   {
-    "line": 2,
-    "meta": {
-      "print_type": "simple",
-      "raw_type": "IDENTIFIER"
-    },
-    "type": "output",
-    "value": "x"
-  },
-  {
-    "body": [
-      {
-        "line": 1,
-        "meta": {
-          "print_type": "simple",
-          "raw_type": "STRING"
-        },
-        "type": "output",
-        "value": "Yep"
-      },
-      {
-        "line": 2,
-        "meta": {
-          "assignment-type": "basic",
-          "math": false,
-          "raw_type": "INT"
-        },
-        "type": "let",
-        "var_name": "x",
-        "var_type": "int",
-        "var_value": 10
-      }
-    ],
-    "condition": "x == 5",
     "line": 3,
-    "meta": {
-      "UUID": 0,
-      "sub_type": "if"
-    },
-    "type": "logic"
-  },
-  {
-    "line": 8,
     "meta": {
       "print_type": "simple",
       "raw_type": "IDENTIFIER"

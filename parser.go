@@ -769,69 +769,36 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 						err.Throw()
 					}
 				case "=":
-					continue // TODO: I'll do it later ngl
 					advance(&index)
-					token = current(&index, tokens)
+					var exprString string
 
-					temp := index + 1 // Did this in order for it to be a sight into the future
-					if current(&temp, tokens).Type == "SYMBOL" && current(&temp, tokens).Val == ";" {
-						ast = append(ast, map[string]interface{}{
-							"type":      "reassign",
-							"var_name":  exprVal,
-							"var_value": token.Val,
-							"line":      token.Line,
-							"meta":      meta,
-						})
-						advance(&index)
-					} else if (current(&temp, tokens).Type == "OPERATOR" && current(&temp, tokens).Val == "+") || (current(&temp, tokens).Type == "SYMBOL" && current(&temp, tokens).Val == ",") {
-						first := current(&index, tokens).Val
-						advance(&index)
-						token := current(&index, tokens)
-						concatCatch := []interface{}{}
-
-						concatCatch = append(concatCatch, fmt.Sprint(first))
-
-						for {
-							if token.Type == "SYMBOL" && token.Val == ";" {
-								break
-							}
-
-							if (token.Type == "SYMBOL" && token.Val == ",") || (token.Type == "OPERATOR" && token.Val == "+") {
-								advance(&index)
-								token = current(&index, tokens)
-								continue
-							}
-
-							concatCatch = append(concatCatch, fmt.Sprint(token.Val))
-							advance(&index)
-							token = current(&index, tokens)
-						}
+					for {
+						token = current(&index, tokens)
 
 						if token.Type == "SYMBOL" && token.Val == ";" {
-							ast = append(ast, map[string]interface{}{
-								"type":      "reassign",
-								"var_name":  exprVal,
-								"var_value": concatCatch,
-								"line":      token.Line,
-								"meta":      meta,
-							})
+							break
 						}
-					} else {
-						err := NewError("MissingBreaker", token.Line, fmt.Sprintf("%v = %v <-", exprVal, token.Val), "This line is missing a semicolon", true, "")
-						err.Throw()
+
+						// Possibly turn into a switch-case
+						if token.Type == "STRING" {
+							exprString += fmt.Sprintf("\"%v\"", token.Val)
+							advance(&index)
+						} else {
+							exprString += fmt.Sprint(token.Val)
+							advance(&index)
+						}
+
+						exprString += " " // Adding spacing
 					}
 
-					switch token.Type {
-					case "MATH":
-
-					case "FUNC":
-						advance(&index)
-						advance(&index)
-						token = current(&index, tokens)
-						fmt.Println(token)
-						os.Exit(0)
-					}
-
+					meta["value"] = strings.TrimSpace(exprString)
+					meta["target"] = exprVal
+					ast = append(ast, map[string]interface{}{
+						"type":     "expr",
+						"sub_type": "reassign",
+						"meta":     meta,
+						"line":     token.Line,
+					})
 				}
 			}
 		} else if token.Type == "MACRO" {

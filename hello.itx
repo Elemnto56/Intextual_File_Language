@@ -1,8 +1,0 @@
-let x: int = 5
-output x
-if x == 5 {
-    output "Yep"
-    let x: int = 10
-}
-
-output x
