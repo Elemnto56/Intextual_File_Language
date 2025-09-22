@@ -67,7 +67,7 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 							if token.Type == "OPERATOR" && token.Val == "=" {
 								advance(&index)
 								token := current(&index, tokens)
-								if Contains([]interface{}{"INT", "BOOL", "STRING", "CHAR", "IDENTIFIER", "TXT BLK"}, token.Type) {
+								if Contains([]interface{}{"INT", "BOOL", "STRING", "CHAR", "IDENTIFIER"}, token.Type) {
 									value := token.Val
 									_type := token.Type
 									meta["raw_type"] = _type
@@ -138,6 +138,33 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 										err := NewError("MissingBreaker", token.Line, fmt.Sprintf("%v %v: %v = %v <-", "let", name, Type, value), "This line is missing a semicolon", true, "")
 										err.Throw()
 									}
+								} else if token.Type == "TXT BLK" {
+									var captureStr string
+
+									for i, line := range token.Val.([]interface{}) {
+										if i == len(token.Val.([]interface{}))-1 {
+											captureStr += fmt.Sprint(line)
+										} else {
+											captureStr += fmt.Sprint(line) + "\n"
+										}
+									}
+
+									advance(&index)
+									token = current(&index, tokens)
+									if token.Type == "SYMBOL" && token.Val == ";" {
+										meta["math"] = false
+										meta["assignment-type"] = "basic"
+										meta["raw_type"] = "TXT BLK"
+										ast = append(ast, map[string]interface{}{
+											"type":      "let",
+											"var_type":  Type,
+											"var_name":  name,
+											"var_value": captureStr,
+											"line":      token.Line,
+											"meta":      meta,
+										})
+									}
+									// I won't be calling a missing semicolon error, since it'd be the lexer's fault; not user's
 								} else if token.Type == "ORDER" {
 									tokenList := token.Val.([]interface{})
 									var orderList []map[string]interface{}
@@ -433,7 +460,7 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 				if token.Type == "PARA" && token.Val == "(" {
 					advance(&index)
 					token = current(&index, tokens)
-					if token.Type == "STRING" {
+					if token.Type == "STRING" || token.Type == "IDENTIFIER" {
 						targetFile := token.Val
 						advance(&index)
 						token = current(&index, tokens)
@@ -490,7 +517,7 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 							err.Throw()
 						}
 					} else {
-						err := NewError("TypeMismatch", token.Line, fmt.Sprintf("write(%s%v%s, ...);", Red, token.Val, Reset), "The value for the file was not a string", true, "")
+						err := NewError("TypeMismatch", token.Line, fmt.Sprintf("write(%s%v%s, ...);", Red, token.Val, Reset), "The value for the file was not a string or variable", true, "")
 						err.Throw()
 					}
 				} else {
@@ -555,7 +582,7 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 				if token.Type == "PARA" && token.Val == "(" {
 					advance(&index)
 					token = current(&index, tokens)
-					if token.Type == "STRING" || token.Type == "IDENTIFIER" {
+					if Contains([]interface{}{"STRING", "IDENTIFIER", "ORDER"}, token.Type) {
 						meta["raw"] = token.Type
 						targetFile := token.Val
 						advance(&index)
@@ -779,16 +806,25 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 							break
 						}
 
-						// Possibly turn into a switch-case
-						if token.Type == "STRING" {
+						switch token.Type {
+						case "STRING":
 							exprString += fmt.Sprintf("\"%v\"", token.Val)
 							advance(&index)
-						} else {
+						case "TXT BLK":
+							for i, line := range token.Val.([]interface{}) {
+								if i == len(token.Val.([]interface{}))-1 {
+									exprString += fmt.Sprint(line)
+								} else {
+									exprString += fmt.Sprint(line) + "\n"
+								}
+							}
+							exprString = fmt.Sprintf("\"%v\"", exprString)
+							advance(&index)
+						default:
 							exprString += fmt.Sprint(token.Val)
 							advance(&index)
 						}
 
-						exprString += " " // Adding spacing
 					}
 
 					meta["value"] = strings.TrimSpace(exprString)
@@ -810,13 +846,13 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 			case "declaration":
 
 				callStr := fmt.Sprint(metaJSON["call"])
-				callMap := make(map[string]interface{})
+				callList := []map[string]interface{}{}
 
 				name := strings.TrimSpace(fmt.Sprint(metaJSON["name"]))
 				returns := metaJSON["returns"].([]interface{})
 
 				paramStr := fmt.Sprint(metaJSON["param"])
-				paramMap := make(map[string]interface{})
+				paramList := []map[string]interface{}{}
 
 				matchForParam := `\w+\:\s?(string|int|bool|float|char|(ord|order))`
 
@@ -825,7 +861,7 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 					cName := strings.TrimSpace(parts[0])
 					cType := strings.TrimSpace(parts[1])
 
-					callMap[cName] = cType
+					callList = append(callList, map[string]interface{}{cName: cType})
 				}
 
 				for _, p := range sliceOfRegex(paramStr, matchForParam) {
@@ -833,7 +869,7 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 					pName := strings.TrimSpace(parts[0])
 					pType := strings.TrimSpace(parts[1])
 
-					paramMap[pName] = pType
+					paramList = append(paramList, map[string]interface{}{pName: pType})
 				}
 
 				advance(&index)
@@ -848,8 +884,8 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 
 					astBody := Parser(toks)
 
-					meta["call"] = callMap
-					meta["param"] = paramMap
+					meta["call"] = callList
+					meta["param"] = paramList
 					meta["returns"] = returns
 					meta["macro-type"] = "declaration"
 					ast = append(ast, map[string]interface{}{

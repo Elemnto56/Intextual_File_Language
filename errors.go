@@ -17,6 +17,7 @@ type ItxErr struct {
 	Hint        string
 }
 
+// Call an error
 func NewError(name string, line int, expr string, desc string, approx bool, hint string) ItxErr {
 	return ItxErr{
 		Name:        name,

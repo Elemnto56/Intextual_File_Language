@@ -208,7 +208,7 @@ func Validator(givenNodes []map[string]interface{}, setVars map[string]interface
 				for key, val := range indexRef {
 					if _, ok := ValidatorVariables[key]; !ok {
 						err := NewError("VariableNotFound", inte, fmt.Sprintf("output %s%v%s[%v];", Red, key, Reset, val), "This variable was not found for an order", true, "")
-						err.Throw() // Fix this
+						err.Throw()
 					}
 				}
 			}
@@ -303,7 +303,12 @@ func Validator(givenNodes []map[string]interface{}, setVars map[string]interface
 				if args != nil {
 					args := args.([]interface{})
 					if a, _ := strconv.Atoi(fmt.Sprint(currentMac["param-len"])); len(args) > a {
-						err := NewError("RangeException", inte, fmt.Sprintf("%v(... [%s%v%s > %v] ...)", name, Red, len(args), Reset, a), "The amount of arguements given did not respect the amount to be recieved", true, "")
+						err := NewError("RangeException", inte, fmt.Sprintf("%v(... [%s%v%s > %v] ...)", name, Red, len(args), Reset, a), "The amount of arguements given did not respect the amount to be recieved", true, "The number in red is how many arguments you gave, while the other number is how many was expected")
+						err.Throw()
+					}
+
+					if a, _ := strconv.Atoi(fmt.Sprint(currentMac["param-len"])); len(args) < a {
+						err := NewError("RangeException", inte, fmt.Sprintf("%v(... [%s%v%s < %v] ...)", name, Red, len(args), Reset, a), "The amount of arguements given did not respect the amount to be recieved", true, "The number in red is how many arguments you gave, while the other number is how many was expected")
 						err.Throw()
 					}
 				}

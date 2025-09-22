@@ -1,5 +1,12 @@
-# Intextual File Language
-A DSL programming language for file and text automation with the intent to efficiently and swiftly manage your files.
+<h1 style="text-align: center;">Intextual File Language</h1>
+<pre>
+ __     __   __     ______   ______     __  __     ______ 
+/\ \   /\ "-.\ \   /\__  _\ /\  ___\   /\_\_\_\   /\__  _\
+\ \ \  \ \ \-.  \  \/_/\ \/ \ \  __\   \/_/\_\/_  \/_/\ \/
+ \ \_\  \ \_\\"\_\    \ \_\  \ \_____\   /\_\/\_\    \ \_\
+  \/_/   \/_/ \/_/     \/_/   \/_____/   \/_/\/_/     \/_/
+</pre>             
+<p style="text-align: center;">A DSL programming language for file and text automation with the intent to efficiently and swiftly manage your files.</p>
 
 ## Installation
 1. Head over to the the "Releases" tab on the right of your screen to download the latest release, or click this link https://github.com/Elemnto56/Intextual_File_Language/releases to view them all.

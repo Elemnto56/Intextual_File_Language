@@ -31,10 +31,9 @@ func Contains(slice []interface{}, look interface{}) bool {
 var lookUp = make(map[string]interface{})
 
 func Lexer(filename interface{}, givenLines []string, appendSemi bool) []map[string]interface{} {
-
-	pat2 := `([A-Za-z]+\_*?)+\[([0-9]+|\w+)\];?`
-	re2 := regexp.MustCompile(pat2)
-
+	// Func Gloabls
+	var pat2 string = `([A-Za-z]+\_*?)+\[([0-9]+|\w+)\];?`
+	var re2 *regexp.Regexp = regexp.MustCompile(pat2)
 	var file *os.File
 	var err error
 	var lines []string
@@ -60,6 +59,7 @@ func Lexer(filename interface{}, givenLines []string, appendSemi bool) []map[str
 	if givenLines != nil {
 		lines = givenLines
 	}
+
 	//outer:
 	for index := 0; index < len(lines); index++ {
 		line := strings.TrimSpace(lines[index])
@@ -131,7 +131,7 @@ func Lexer(filename interface{}, givenLines []string, appendSemi bool) []map[str
 			line = "{"
 		}
 
-	inner: // Label for loop
+	inner:
 		for i := 0; i < len(line); i++ { // NOTE: Some are place early so the others behind don't get triggered beforehand
 			char := rune(line[i])
 
@@ -166,13 +166,34 @@ func Lexer(filename interface{}, givenLines []string, appendSemi bool) []map[str
 			if i+1 < len(line) && string(line[i:i+2]) == "/*" {
 				var multiComment string
 
-				index += 1
 				for index < len(lines) {
-					if strings.TrimSpace(lines[index]) == "*/" { // FIXME: Add closing comment line support; don't leave on single line
+					line = lines[index]
+					for i < len(line) {
+						if i+1 < len(line) && string(line[i:i+2]) == "*/" {
+							if i+1 < len(line) {
+								i += 2
+								line = line[i:]
+								i = 0 // Reset the iteration since a new line is initilized
+								break
+							} else {
+								index++
+								continue
+							}
+						}
+						i++
+					}
+
+					if index+1 < len(lines) && line == "*/" {
+						index++
+						line = lines[index]
+						break
+					} else if index >= len(lines) && line == "*/" {
+						line = ""
 						break
 					}
-					multiComment += lines[index]
-					index += 1
+
+					multiComment += lines[index] // multiComment serves absolutely no purpose whatsoever, but is kept so I don't get confused
+					index++
 				}
 
 				continue
@@ -371,13 +392,43 @@ func Lexer(filename interface{}, givenLines []string, appendSemi bool) []map[str
 			if i+2 < len(line) && string(line[i:i+3]) == "[[[" {
 				i += 3
 				captureBLK := []interface{}{}
+				var firstRun = true
 
-				for index++; index < len(lines); {
-					if strings.HasPrefix(lines[index], "]]]") {
+			linesLoop:
+				for index < len(lines) {
+					if firstRun {
+						line = line[i:]
+					} else if !firstRun {
+						line = lines[index]
+					}
+
+					var capline string
+					i = 0
+					for i < len(line) {
+						if i+2 < len(line) && string(line[i:i+3]) == "]]]" {
+							captureBLK = append(captureBLK, capline)
+							if i+2 < len(line) {
+								i += 3
+								line = line[i:]
+								i -= 4
+								break linesLoop
+							} else {
+								index++
+								continue
+							}
+						}
+						capline += string(line[i])
+						i++
+					}
+
+					if line == "]]]" {
+						line = ""
+						index++
 						break
 					}
-					captureBLK = append(captureBLK, lines[index])
-					index += 1
+					captureBLK = append(captureBLK, strings.TrimSpace(line))
+					index++
+					firstRun = false
 				}
 
 				allTokens = append(allTokens, map[string]interface{}{
@@ -567,7 +618,7 @@ func Lexer(filename interface{}, givenLines []string, appendSemi bool) []map[str
 
 		if len(allTokens) > 0 {
 			last := allTokens[len(allTokens)-1]
-			if !(Contains([]interface{}{"SYMBOL", "LCURL", "RCURL", "OPERATOR"}, last["TYPE"]) || Contains([]interface{}{";", "{", "}", "="}, last["VAL"])) && appendSemi {
+			if !(Contains([]interface{}{"SYMBOL", "LCURL", "RCURL", "OPERATOR", "KEYWORD"}, last["TYPE"]) || Contains([]interface{}{";", "{", "}", "="}, last["VAL"])) && appendSemi {
 				allTokens = append(allTokens, map[string]interface{}{
 					"TYPE": "SYMBOL",
 					"VAL":  ";",

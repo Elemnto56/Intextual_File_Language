@@ -3,18 +3,68 @@
     "line": 1,
     "meta": {
       "target": "x",
-      "value": "2 + 1"
+      "value": "\"What\""
     },
     "sub_type": "reassign",
     "type": "expr"
   },
   {
-    "line": 3,
+    "line": 2,
     "meta": {
-      "print_type": "simple",
-      "raw_type": "IDENTIFIER"
+      "target": "y",
+      "value": "\"None\""
     },
-    "type": "output",
-    "value": "x"
+    "sub_type": "reassign",
+    "type": "expr"
+  },
+  {
+    "body": [
+      {
+        "line": 1,
+        "meta": {
+          "print_type": "mixed",
+          "raw_type": "none"
+        },
+        "type": "output",
+        "value": [
+          "x",
+          "y"
+        ]
+      }
+    ],
+    "line": 4,
+    "meta": {
+      "call": [],
+      "macro-type": "declaration",
+      "param": [
+        {
+          "x": "string"
+        },
+        {
+          "y": "string"
+        }
+      ],
+      "returns": []
+    },
+    "name": "mac",
+    "type": "macro"
+  },
+  {
+    "line": 8,
+    "meta": {
+      "args": [
+        {
+          "type": "IDENTIFIER",
+          "val": "x"
+        },
+        {
+          "type": "IDENTIFIER",
+          "val": "y"
+        }
+      ],
+      "macro-type": "standalone"
+    },
+    "name": "mac",
+    "type": "macro"
   }
 ]

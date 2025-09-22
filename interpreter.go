@@ -13,10 +13,15 @@ import (
 
 // Globals
 type MarcoDef struct {
-	calls      map[string]interface{}
-	parameters map[string]interface{}
+	calls      []interface{} // Will be []map[string]interface{}
+	parameters []interface{} // Will be []map[string]interface{}
 	returns    []interface{}
 	body       []map[string]interface{}
+}
+
+type VarManager struct {
+	Value interface{}
+	Type  string
 }
 
 var isBinary bool
@@ -24,13 +29,13 @@ var pat2 string = `^([A-Za-z]+\_*?)+\[([0-9]+|\w)\];?$` // For order indexes (i.
 var re2 *regexp.Regexp = regexp.MustCompile(pat2)
 var breakFlag bool = false
 var contFlag bool = false
-var BackupVariables = make(map[string]interface{}) // Might use for later things?
+var BackupVariables = make(map[string]VarManager) // Might use for later things?
 var macroTable = make(map[string]MarcoDef)
 
-func Interpreter(givenNodes []map[string]interface{}, InterpreterVariables map[string]interface{}) {
+func Interpreter(givenNodes []map[string]interface{}, InterpreterVariables map[string]VarManager) {
 	// Func Globals
 	var uuid int = 0
-	MacroVariables := make(map[string]interface{})
+	MacroVariables := make(map[string]VarManager)
 
 	// Grab AST
 	bytes, _ := os.ReadFile("./.intext/cache/AST.json")
@@ -72,35 +77,34 @@ func Interpreter(givenNodes []map[string]interface{}, InterpreterVariables map[s
 
 			if re2.MatchString(fmt.Sprint(val)) {
 				v, _ := expr.Eval(fmt.Sprintln(val), InterpreterVariables)
-				InterpreterVariables[name] = v
+				InterpreterVariables[name] = VarManager{Value: v, Type: "unknown"}
 			} else {
 				switch Type {
 				case "int":
 					switch meta["math"] {
 					case true:
-						cmp, err := expr.Compile(fmt.Sprint(val))
+						ans, err := EvaluateExpression(fmt.Sprint(val), InterpreterVariables)
 						Check(err)
-						ans, errd := expr.Run(cmp, InterpreterVariables)
-						Check(errd)
-						InterpreterVariables[name] = ans
+						InterpreterVariables[name] = VarManager{Value: ans, Type: "int"}
 					case false:
-						InterpreterVariables[name] = val
+						InterpreterVariables[name] = VarManager{Value: val, Type: "int"}
+
 					}
 				case "string", "char":
 					switch meta["raw_type"] {
-					case "STRING", "CHAR":
+					case "STRING", "CHAR", "TXT BLK":
 						val := val.(string)
 
-						InterpreterVariables[name] = val
+						InterpreterVariables[name] = VarManager{Value: val, Type: "string"}
 
-					case "FUNC":
+					case "FUNC": // Change in future
 						value := val.(map[string]interface{})
 						file := value["read"]
 
 						data, err := os.ReadFile(fmt.Sprint(file))
 						Check(err)
 						isBinary = binaryCheck(data)
-						InterpreterVariables[name] = string(data)
+						InterpreterVariables[name] = VarManager{Value: string(data), Type: "string"} // Making the type a string since anything coming from read is unknown, thus making a string would be safest
 					case "concat":
 						var catch string
 						for _, element := range val.([]interface{}) {
@@ -111,19 +115,13 @@ func Interpreter(givenNodes []map[string]interface{}, InterpreterVariables map[s
 								catch += fmt.Sprint(element)
 							}
 						}
-						InterpreterVariables[name] = catch
-					case "TXT BLK":
-						var rawCatch string
-						for _, line := range val.([]interface{}) {
-							rawCatch += fmt.Sprintf("%s \n", fmt.Sprint(line))
-						}
-						catch := strings.TrimSpace(rawCatch)
-						InterpreterVariables[name] = catch
+						InterpreterVariables[name] = VarManager{Value: catch, Type: "string"}
+
 					}
 				case "bool":
-					InterpreterVariables[name] = val
+					InterpreterVariables[name] = VarManager{Value: val, Type: "bool"}
 				case "float":
-					InterpreterVariables[name] = val
+					InterpreterVariables[name] = VarManager{Value: val, Type: "float"}
 				case "order", "ord":
 					valList := val.([]interface{})
 					var capture []interface{}
@@ -138,7 +136,7 @@ func Interpreter(givenNodes []map[string]interface{}, InterpreterVariables map[s
 						}
 					}
 
-					InterpreterVariables[name] = capture
+					InterpreterVariables[name] = VarManager{Value: capture, Type: "order"}
 				}
 			}
 
@@ -154,6 +152,7 @@ func Interpreter(givenNodes []map[string]interface{}, InterpreterVariables map[s
 			case "simple":
 				val, ok := InterpreterVariables[value.(string)]
 				if ok {
+					val := val.Value
 					if isBinary {
 						fmt.Println("\033[31m--- WARNING: The following variable you are about to output is linked to a file variable that is suspected to be a binary file ---\033[0m \n Ctrl + C before outputing... Or press Enter to continue regardless")
 
@@ -187,6 +186,7 @@ func Interpreter(givenNodes []map[string]interface{}, InterpreterVariables map[s
 					case string:
 						vari, ok := InterpreterVariables[SpagVal]
 						if ok {
+							vari := vari.Value
 							SpagList = append(SpagList, vari)
 						} else {
 							if re2.MatchString(SpagVal) { // Order index check
@@ -201,7 +201,7 @@ func Interpreter(givenNodes []map[string]interface{}, InterpreterVariables map[s
 						for _, element := range SpagVal {
 							forUse := element.(map[string]interface{})
 							if forUse["TYPE"] == "IDENTIFIER" {
-								a := InterpreterVariables[fmt.Sprint(forUse["VAL"])]
+								a := InterpreterVariables[fmt.Sprint(forUse["VAL"])].Value
 								capture = append(capture, a)
 							} else {
 								capture = append(capture, forUse["VAL"])
@@ -228,7 +228,7 @@ func Interpreter(givenNodes []map[string]interface{}, InterpreterVariables map[s
 				OrdRef := value.(map[string]interface{})
 
 				for key, val := range OrdRef {
-					ListRaw := InterpreterVariables[key]
+					ListRaw := InterpreterVariables[key].Value
 					List := ListRaw.([]interface{})
 					var i int
 					if _, ok := InterpreterVariables[fmt.Sprint(val)]; ok {
@@ -249,13 +249,16 @@ func Interpreter(givenNodes []map[string]interface{}, InterpreterVariables map[s
 			switch node["call"] {
 			case "write":
 				input := meta["input"]
-				val := InterpreterVariables[fmt.Sprint(input)]
-				target := meta["target"]
-				perms := meta["perms"]
-				octal, _ := strconv.ParseInt(fmt.Sprint(perms), 8, 64)
-				err := os.WriteFile(fmt.Sprint(target), []byte(val.(string)), 0000)
+				val := InterpreterVariables[fmt.Sprint(input)].Value
+				target := fmt.Sprint(meta["target"])
+				if a, ok := InterpreterVariables[target]; ok {
+					target = fmt.Sprint(a)
+				}
+				perms := fmt.Sprint(meta["perms"])
+				octal, _ := strconv.ParseInt(perms, 8, 64)
+				err := os.WriteFile(target, []byte(val.(string)), 0000)
 				Check(err)
-				erra := os.Chmod(fmt.Sprint(target), os.FileMode(octal))
+				erra := os.Chmod(target, os.FileMode(octal))
 				Check(erra)
 			case "append":
 				fileTaget := meta["target"]
@@ -270,13 +273,44 @@ func Interpreter(givenNodes []map[string]interface{}, InterpreterVariables map[s
 				_, errd := f.WriteString(val)
 				Check(errd)
 			case "del":
-				fileTarget := fmt.Sprint(meta["target"])
-				var val string
-				if _, ok := InterpreterVariables[fileTarget]; ok {
-					val = fmt.Sprint(InterpreterVariables[fileTarget])
-					os.Remove(val)
-				} else {
-					os.Remove(fileTarget)
+				fileTarget := meta["target"]
+
+				switch fileTarget := fileTarget.(type) {
+				case string:
+					var variCap interface{}
+
+					if a, ok := InterpreterVariables[fileTarget]; ok {
+						variCap = a
+					} else if !ok {
+						os.Remove(fileTarget)
+					}
+
+					switch vari := variCap.(type) {
+					case string:
+						os.Remove(vari)
+					case []interface{}:
+						for _, element := range vari {
+							if a, ok := InterpreterVariables[fmt.Sprint(element.(map[string]interface{})["VAL"])]; ok { // It might be in InterpreterVariables... maybe
+								element = a
+							} else {
+								element = element.(map[string]interface{})["VAL"]
+							}
+							os.Remove(fmt.Sprint(element))
+						}
+					default:
+						panic("Bad type") // Make a better error call
+					}
+				case []interface{}:
+					for _, element := range fileTarget {
+						if a, ok := InterpreterVariables[fmt.Sprint(element.(map[string]interface{})["VAL"])]; ok { // It might be in InterpreterVariables... maybe
+							element = a
+						} else {
+							element = element.(map[string]interface{})["VAL"]
+						}
+						os.Remove(fmt.Sprint(element))
+					}
+				default:
+					panic("Bad type")
 				}
 			}
 
@@ -308,7 +342,6 @@ func Interpreter(givenNodes []map[string]interface{}, InterpreterVariables map[s
 						index++
 					}
 				}
-				index -= 2
 			case "while":
 				cond := fmt.Sprint(node["condition"])
 				body := node["body"].([]interface{})
@@ -359,7 +392,7 @@ func Interpreter(givenNodes []map[string]interface{}, InterpreterVariables map[s
 				if rawItr != nil {
 				inner:
 					for i := 0; i < times; i++ {
-						InterpreterVariables[itr] = i
+						InterpreterVariables[itr] = VarManager{Value: i, Type: "unknown"}
 
 						if contFlag {
 							contFlag = false
@@ -439,24 +472,24 @@ func Interpreter(givenNodes []map[string]interface{}, InterpreterVariables map[s
 					if strCheck {
 						val, err := EvaluateExpression(fmt.Sprintf("\"%s\" + \"%s\"", fmt.Sprint(target), fmt.Sprint(newValue)), InterpreterVariables)
 						Check(err)
-						InterpreterVariables[rawTarget] = val
+						InterpreterVariables[rawTarget] = VarManager{Value: val, Type: "string"}
 					} else {
 						val, err := EvaluateExpression(fmt.Sprintf("%v + %v", target, newValue), InterpreterVariables)
 						Check(err)
-						InterpreterVariables[rawTarget] = val
+						InterpreterVariables[rawTarget] = VarManager{Value: val, Type: "int"}
 					}
 				case "-=":
 					val := intTarget - intNewVal
 
-					InterpreterVariables[rawTarget] = val
+					InterpreterVariables[rawTarget] = VarManager{Value: val, Type: "int"}
 				case "*=":
 					val := intTarget * intNewVal
 
-					InterpreterVariables[rawTarget] = val
+					InterpreterVariables[rawTarget] = VarManager{Value: val, Type: "int"}
 				case "/=":
 					val := intTarget / intNewVal
 
-					InterpreterVariables[rawTarget] = val
+					InterpreterVariables[rawTarget] = VarManager{Value: val, Type: "int"}
 				}
 			case "reassign":
 				target := fmt.Sprint(meta["target"])
@@ -464,7 +497,14 @@ func Interpreter(givenNodes []map[string]interface{}, InterpreterVariables map[s
 
 				evald, err := EvaluateExpression(value, InterpreterVariables)
 				Check(err)
-				InterpreterVariables[target] = evald
+
+				_, vOk := evald.(string)
+				if _, ok := InterpreterVariables[target]; !ok && !vOk {
+					err := NewError("TypeMismatch", line, fmt.Sprintf("%v = %s%v%s", target, Red, value, Reset), "The following value did not result into a string", true, "Shorthand variable declarations require the value to be a string")
+					err.Throw()
+				}
+
+				InterpreterVariables[target] = VarManager{Value: evald, Type: "string"}
 			}
 
 		case "macro":
@@ -480,8 +520,8 @@ func Interpreter(givenNodes []map[string]interface{}, InterpreterVariables map[s
 				}
 
 				macroTable[fmt.Sprint(node["name"])] = MarcoDef{
-					calls:      meta["call"].(map[string]interface{}),
-					parameters: meta["param"].(map[string]interface{}),
+					calls:      meta["call"].([]interface{}),
+					parameters: meta["param"].([]interface{}),
 					returns:    meta["returns"].([]interface{}),
 					body:       body,
 				}
@@ -527,28 +567,29 @@ func Interpreter(givenNodes []map[string]interface{}, InterpreterVariables map[s
 						}
 
 						var count int = 0
-						for paramName, expectedType := range calledMacro.parameters {
-							if fmt.Sprint(expectedType) == strings.ToLower(fmt.Sprint(args[count].(map[string]interface{})["type"])) {
-								MacroVariables[paramName] = args[count].(map[string]interface{})["val"]
-							} else {
-								err := NewError("TypeMismatch", line, fmt.Sprintf("%v(... %s%v%s(%v) ...) -> %v(%s%v%s)",
-									name,
-									Red,
-									strings.ToLower(fmt.Sprint(args[count].(map[string]interface{})["type"])),
-									Reset,
-									fmt.Sprint(args[count].(map[string]interface{})["val"]),
-									name,
-									Green,
-									expectedType,
-									Reset,
-								), "A data type of a value given during the macro call was unexpected", true, "")
-								err.Throw()
+						for _, parameters := range calledMacro.parameters {
+							for paramName, expectedType := range parameters.(map[string]interface{}) {
+								if a := args[count]; fmt.Sprint(expectedType) == a.(VarManager).Type {
+									MacroVariables[paramName] = VarManager{Value: a.(VarManager).Value, Type: "unknown"}
+								} else {
+									err := NewError("TypeMismatch", line, fmt.Sprintf("%v(... %s%v%s(%v) ...) -> %v(%s%v%s)",
+										name,
+										Red,
+										strings.ToLower(fmt.Sprint(args[count].(map[string]interface{})["type"])),
+										Reset,
+										fmt.Sprint(args[count].(map[string]interface{})["val"]),
+										name,
+										Green,
+										expectedType,
+										Reset,
+									), "A data type of a value given during the macro call was unexpected", true, "")
+									err.Throw()
+								}
+
+								count++
 							}
-
-							count++
 						}
-
-						Validator(calledMacro.body, MacroVariables)
+						//Validator(calledMacro.body, MacroVariables)
 						Interpreter(calledMacro.body, MacroVariables)
 					}
 				}

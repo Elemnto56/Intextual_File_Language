@@ -41,11 +41,10 @@ func Tokenize(expr string) []EvalToken {
 			}
 			word := expr[start:i]
 
-			// Check for keywords
 			if word == "true" || word == "false" {
 				tokens = append(tokens, EvalToken{"BOOL", word})
 			} else {
-				if expr[i] == '(' {
+				if i+1 < len(expr) && expr[i] == '(' {
 					tokens = append(tokens, EvalToken{"FUNC", word})
 				} else {
 					tokens = append(tokens, EvalToken{"VAR", word})
@@ -98,20 +97,26 @@ type Evaluator struct {
 }
 
 // Evaluate your expressions
-func EvaluateExpression(expression string, variables map[string]interface{}) (interface{}, error) {
+func EvaluateExpression(expression string, variables map[string]VarManager) (interface{}, error) {
 	tokens := Tokenize(expression)
-	if len(tokens) == 0 {
-		return nil, fmt.Errorf("empty expression")
-	}
+	fixedVariables := make(map[string]interface{})
 
 	if variables == nil {
-		variables = make(map[string]interface{})
+		fixedVariables = make(map[string]interface{})
+	}
+
+	for key, val := range variables {
+		fixedVariables[key] = val.Value
+	}
+
+	if len(tokens) == 0 {
+		return nil, fmt.Errorf("empty expression")
 	}
 
 	e := &Evaluator{
 		tokens: tokens,
 		pos:    0,
-		vars:   variables,
+		vars:   fixedVariables,
 	}
 
 	result := e.parseExpression()
@@ -304,11 +309,15 @@ func compare(left interface{}, op string, right interface{}) bool {
 			}
 		}
 		// Handle boolean comparison
-		if lb, ok := left.(bool); ok {
-			if rb, ok := right.(bool); ok {
+		var ok bool
+		lb, err := strconv.ParseBool(fmt.Sprint(left))
+		if lb, ok = left.(bool); ok || err == nil {
+			rb, err := strconv.ParseBool(fmt.Sprint(right))
+			if rb, ok = right.(bool); ok || err == nil {
 				return lb == rb
 			}
 		}
+		fmt.Printf("%T %T\n", left, right)
 		return toFloat(left) == toFloat(right)
 	case "!=":
 		// Handle string compare
