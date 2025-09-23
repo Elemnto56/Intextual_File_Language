@@ -12,6 +12,8 @@ import (
 	"github.com/expr-lang/expr"
 )
 
+var ValidatorVariables = make(map[string]interface{})
+
 func Validator(givenNodes []map[string]interface{}, setVars map[string]interface{}) {
 	// Take in AST.json
 	b, _ := os.ReadFile("./.intext/cache/AST.json")
@@ -21,7 +23,6 @@ func Validator(givenNodes []map[string]interface{}, setVars map[string]interface
 
 	// Func Globals
 	macroLookUp := make(map[string]map[string]interface{})
-	ValidatorVariables := make(map[string]interface{})
 
 	// Regexs
 	pat0 := `((write|read|append|input)\((|.+)\)|declare|ouput|[\+|\-|\*|\\|\+\=|\-\=|\\\=|\*\=])`
@@ -295,7 +296,7 @@ func Validator(givenNodes []map[string]interface{}, setVars map[string]interface
 
 			switch meta["macro-type"] {
 			case "declaration":
-				macroLookUp[name] = map[string]interface{}{"return-len": len(meta["returns"].([]interface{})), "param-len": len(meta["param"].(map[string]interface{})), "call-len": len(meta["call"].(map[string]interface{}))}
+				macroLookUp[name] = map[string]interface{}{"return-len": len(meta["returns"].([]interface{})), "param-len": len(meta["param"].([]interface{})), "call-len": len(meta["call"].([]interface{}))}
 			case "standalone":
 				args := meta["args"]
 				currentMac := macroLookUp[name]

@@ -44,7 +44,7 @@ func main() {
 			filename := args[0]
 			Lexer(filename, nil, true)
 			Parser(nil)
-			//Validator(nil, nil) // UPDATE WHEN CAN
+			//Validator(nil, nil)
 			Interpreter(nil, nil)
 		},
 	}

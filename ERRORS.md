@@ -38,4 +38,4 @@ A list of all possible errors that can occur during Intext execution and validat
 
 | Error Name      | Description                            | Example       | Suggested Fix         |
 |-----------------|----------------------------------------|---------------|-----------------------|
-<!-- Add more here when needed>
+| SupportError | Tried to use any piece of syntax or concept in Intext that isn't support yet, but will likely be in the future | N/A | Use something supported I guess? Even if it's the longer route.... Also, be patient...

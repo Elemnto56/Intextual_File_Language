@@ -63,10 +63,9 @@ func Tokenize(expr string) []EvalToken {
 				continue
 			}
 		}
-
 		// Single-character operators
 		switch expr[i] {
-		case '+', '-', '*', '/', '<', '>', '!':
+		case '+', '-', '*', '/', '<', '>', '!', '%':
 			tokens = append(tokens, EvalToken{"OP", string(expr[i])})
 		case '(', ')':
 			tokens = append(tokens, EvalToken{"PAREN", string(expr[i])})
@@ -80,6 +79,16 @@ func Tokenize(expr string) []EvalToken {
 			}
 
 			tokens = append(tokens, EvalToken{"STRING", capture})
+		case '\'':
+			i++
+			char := string(expr[i])
+			i++
+			tokens = append(tokens, EvalToken{"CHARACTER", char})
+		case ',':
+			fmt.Println(string(expr[i]))
+			tokens = append(tokens, EvalToken{"COMMA", string(expr[i])})
+		case '[': // Keep brackets at bottom so other tokens can already be created; less work to do
+			fmt.Println(expr)
 		default:
 			panic(fmt.Sprintf("Unknown character: %c", expr[i]))
 		}
@@ -139,19 +148,19 @@ func (e *Evaluator) parseExpression() interface{} {
 
 // Parse AND expressions
 func (e *Evaluator) parseAnd() interface{} {
-	left := e.parseComparison()
+	left := e.parseSingleCompare()
 
 	for e.pos < len(e.tokens) && e.tokens[e.pos].Value == "&&" {
 		e.pos++ // skip operator
-		right := e.parseComparison()
+		right := e.parseSingleCompare()
 		left = toBool(left) && toBool(right)
 	}
 
 	return left
 }
 
-// Parse comparison operators
-func (e *Evaluator) parseComparison() interface{} {
+// Parse comparison operators and single character ops
+func (e *Evaluator) parseSingleCompare() interface{} {
 	left := e.parseAddSub()
 
 	if e.pos < len(e.tokens) && e.tokens[e.pos].Type == "OP" {
@@ -161,6 +170,10 @@ func (e *Evaluator) parseComparison() interface{} {
 			e.pos++ // skip operator
 			right := e.parseAddSub()
 			return compare(left, op, right)
+		case "%":
+			e.pos++
+			right := e.parseAddSub()
+			return int(toFloat(left)) % int(toFloat(right))
 		}
 	}
 
@@ -230,7 +243,12 @@ func (e *Evaluator) parsePrimary() interface{} {
 
 	if token.Type == "STRING" {
 		e.pos++
-		return fmt.Sprint(token.Value)
+		return token.Value
+	}
+
+	if token.Type == "CHARACTER" {
+		e.pos++
+		return token.Value
 	}
 
 	// Handle NOT operator

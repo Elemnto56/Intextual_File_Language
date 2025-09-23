@@ -489,7 +489,11 @@ func Interpreter(givenNodes []map[string]interface{}, InterpreterVariables map[s
 				case "/=":
 					val := intTarget / intNewVal
 
-					InterpreterVariables[rawTarget] = VarManager{Value: val, Type: "int"}
+					InterpreterVariables[rawTarget] = VarManager{Value: val, Type: "float"}
+				case "%=":
+					val := intTarget % intNewVal
+
+					InterpreterVariables[rawTarget] = VarManager{Value: val, Type: "float"}
 				}
 			case "reassign":
 				target := fmt.Sprint(meta["target"])
@@ -499,9 +503,25 @@ func Interpreter(givenNodes []map[string]interface{}, InterpreterVariables map[s
 				Check(err)
 
 				_, vOk := evald.(string)
-				if _, ok := InterpreterVariables[target]; !ok && !vOk {
+				if val, ok := InterpreterVariables[target]; !ok && !vOk {
 					err := NewError("TypeMismatch", line, fmt.Sprintf("%v = %s%v%s", target, Red, value, Reset), "The following value did not result into a string", true, "Shorthand variable declarations require the value to be a string")
 					err.Throw()
+				} else if ok {
+					a := fmt.Sprintf("%T", evald)
+					var fThr bool = false // Adding this to make my code less repetitive
+
+					if a == "float64" && !(val.Type == "int" || val.Type == "float") {
+						fThr = true
+					}
+					if a == "string" && !(val.Type == "string" || val.Type == "char") {
+						fThr = true
+					}
+					if (a == "bool" && val.Type != "bool") || fThr {
+						err := NewError("TypeMismatch", line, fmt.Sprintf("%v = %s%v%s", target, Red, evald, Reset), "The following value did not match with the type of the original declaration", true, "")
+						err.Throw()
+					}
+
+					InterpreterVariables[target] = VarManager{Type: val.Type, Value: val.Value}
 				}
 
 				InterpreterVariables[target] = VarManager{Value: evald, Type: "string"}

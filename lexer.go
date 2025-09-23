@@ -152,7 +152,7 @@ func Lexer(filename interface{}, givenLines []string, appendSemi bool) []map[str
 			}
 
 			// Checks for math operators
-			if i+1 < len(line) && Contains([]interface{}{">=", "<=", "==", "+=", "*=", "-=", "/=", "||", "&&"}, string(line[i:i+2])) {
+			if i+1 < len(line) && Contains([]interface{}{">=", "<=", "==", "+=", "*=", "-=", "/=", "||", "&&", "%="}, string(line[i:i+2])) {
 				allTokens = append(allTokens, map[string]interface{}{
 					"TYPE": "OPERATOR",
 					"VAL":  string(line[i : i+2]),
@@ -355,7 +355,7 @@ func Lexer(filename interface{}, givenLines []string, appendSemi bool) []map[str
 					})
 					i++
 				} else {
-					if i+3 < len(line) && Contains([]interface{}{"+", "-", "*", "/"}, strings.TrimSpace(string(line[i+1]))) && !Contains([]interface{}{"+=", "-=", "*=", "/="}, strings.TrimSpace(string(line[i:i+3]))) {
+					if i+3 < len(line) && Contains([]interface{}{"+", "-", "*", "/", "%"}, strings.TrimSpace(string(line[i+1]))) && !Contains([]interface{}{"+=", "-=", "*=", "/="}, strings.TrimSpace(string(line[i:i+3]))) {
 						var mathCapture string
 						mathCapture += temp
 

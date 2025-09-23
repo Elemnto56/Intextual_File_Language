@@ -770,7 +770,7 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 
 			if token.Type == "OPERATOR" {
 				switch token.Val {
-				case "+=", "*=", "-=", "/=":
+				case "+=", "*=", "-=", "/=", "%=":
 					incrType := token.Val
 
 					advance(&index)
@@ -820,9 +820,12 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 							}
 							exprString = fmt.Sprintf("\"%v\"", exprString)
 							advance(&index)
-						default:
-							exprString += fmt.Sprint(token.Val)
+						case "CHAR":
+							exprString += fmt.Sprintf("'%v'", token.Val)
 							advance(&index)
+						default:
+							err := NewError("SupportError", token.Line, fmt.Sprintf("%s%v%s = ...", Red, exprVal, Reset), "This assignment operation isn't supported yet", false, "")
+							err.Throw()
 						}
 
 					}
