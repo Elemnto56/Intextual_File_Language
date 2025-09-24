@@ -67,7 +67,7 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 							if token.Type == "OPERATOR" && token.Val == "=" {
 								advance(&index)
 								token := current(&index, tokens)
-								if Contains([]interface{}{"INT", "BOOL", "STRING", "CHAR", "IDENTIFIER"}, token.Type) {
+								if Contains([]interface{}{"INT", "BOOL", "STRING", "CHAR", "IDENTIFIER", "FLOAT"}, token.Type) {
 									value := token.Val
 									_type := token.Type
 									meta["raw_type"] = _type
@@ -822,6 +822,22 @@ func Parser(givenTokens []Tokens) []map[string]interface{} {
 							advance(&index)
 						case "CHAR":
 							exprString += fmt.Sprintf("'%v'", token.Val)
+							advance(&index)
+						/*
+							case "ORDER":
+								exprString += "["
+								for i, element := range token.Val.([]interface{}) {
+									if i == len(token.Val.([]interface{}))-1 {
+										exprString += fmt.Sprint(element.(map[string]interface{})["VAL"])
+									} else {
+										exprString += fmt.Sprint(element.(map[string]interface{})["VAL"]) + ","
+									}
+								}
+								exprString += "]"
+								advance(&index)
+						*/
+						case "INT", "MATH", "OPERATOR", "BOOL", "FLOAT": // Nothing special needs to be done
+							exprString += fmt.Sprint(token.Val)
 							advance(&index)
 						default:
 							err := NewError("SupportError", token.Line, fmt.Sprintf("%s%v%s = ...", Red, exprVal, Reset), "This assignment operation isn't supported yet", false, "")

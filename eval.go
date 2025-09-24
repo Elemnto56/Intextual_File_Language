@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 )
 
@@ -13,8 +14,10 @@ type EvalToken struct {
 
 // Tokenize breaks the expression into tokens
 func Tokenize(expr string) []EvalToken {
+	// Func globals
 	var tokens []EvalToken
 	i := 0
+	var captureOrder bool = false
 
 	for i < len(expr) {
 		// Skip whitespace
@@ -85,10 +88,42 @@ func Tokenize(expr string) []EvalToken {
 			i++
 			tokens = append(tokens, EvalToken{"CHARACTER", char})
 		case ',':
-			fmt.Println(string(expr[i]))
 			tokens = append(tokens, EvalToken{"COMMA", string(expr[i])})
 		case '[': // Keep brackets at bottom so other tokens can already be created; less work to do
-			fmt.Println(expr)
+			tokens = append(tokens, EvalToken{"LBRACK", string(expr[i])})
+			captureOrder = true
+		case ']':
+			if captureOrder {
+				var orderList []EvalToken
+				var crnt int = len(tokens) - 1
+
+			reverseLoop:
+				for crnt >= 0 {
+					element := tokens[crnt]
+					if element.Type == "LBRACK" {
+						i = crnt
+						for crnt < len(tokens) {
+							element := tokens[crnt]
+
+							if expr[i] == ']' {
+								break reverseLoop
+							}
+
+							if element.Type == "COMMA" {
+								crnt++
+								continue
+							}
+
+							orderList = append(orderList, element)
+							crnt++
+							i++
+						}
+					}
+					crnt--
+				}
+
+			}
+			os.Exit(0)
 		default:
 			panic(fmt.Sprintf("Unknown character: %c", expr[i]))
 		}
@@ -335,7 +370,6 @@ func compare(left interface{}, op string, right interface{}) bool {
 				return lb == rb
 			}
 		}
-		fmt.Printf("%T %T\n", left, right)
 		return toFloat(left) == toFloat(right)
 	case "!=":
 		// Handle string compare

@@ -589,7 +589,11 @@ func Interpreter(givenNodes []map[string]interface{}, InterpreterVariables map[s
 						var count int = 0
 						for _, parameters := range calledMacro.parameters {
 							for paramName, expectedType := range parameters.(map[string]interface{}) {
-								if a := args[count]; fmt.Sprint(expectedType) == a.(VarManager).Type {
+								a := args[count]
+								if b, ok := a.(map[string]interface{}); ok {
+									a = VarManager{Type: strings.ToLower(fmt.Sprint(b["type"])), Value: b["val"]}
+								}
+								if fmt.Sprint(expectedType) == a.(VarManager).Type {
 									MacroVariables[paramName] = VarManager{Value: a.(VarManager).Value, Type: "unknown"}
 								} else {
 									err := NewError("TypeMismatch", line, fmt.Sprintf("%v(... %s%v%s(%v) ...) -> %v(%s%v%s)",
