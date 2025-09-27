@@ -113,3 +113,14 @@ func sliceOfRegex(find string, regex string) []string {
 
 	return temp.FindAllString(find, -1)
 }
+
+type WebFile struct {
+	Type     string
+	Content  string
+	FileName string
+}
+
+// For the Playground
+func WebAddFile(filename string, content string, Type string) WebFile {
+	return WebFile{FileName: filename, Content: content, Type: Type}
+}
