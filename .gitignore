@@ -1,0 +1,26 @@
+.intext
+Logos
+go.mod
+go.sum
+TODO.md
+
+# Dependencies
+itx-docs/node_modules
+
+# Production
+itx-docs/build
+
+# Generated files
+itx-docs/.docusaurus
+itx-docs/.cache-loader
+
+# Misc
+itx-docs/.DS_Store
+itx-docs/.env.local
+itx-docs/.env.development.local
+itx-docs/.env.test.local
+itx-docs/.env.production.local
+
+itx-docs/npm-debug.log*
+itx-docs/yarn-debug.log*
+itx-docs/yarn-error.log*

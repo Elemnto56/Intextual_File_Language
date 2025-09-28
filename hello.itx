@@ -1,0 +1,24 @@
+// Calling
+let x: string = "Hello, World!"
+
+macro (call: string) . mac() {
+    output call
+}
+
+x.mac()
+
+// Using parameters; standalone
+
+macro . mac(num: int) { // The period "." is a part of the sytanx regardless if it's using call parameters
+    output num
+}
+
+mac(2)
+
+// return values
+
+macro . mac() -> string {
+    return "What"
+}
+
+x = mac() // If you're wondering why x isn't in a let statement, it's because it's having it's value redeclared. This is unrelated to macros.
