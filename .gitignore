@@ -1,8 +1,4 @@
-.intext
-Logos
-go.mod
-go.sum
-TODO.md
+.idea
 
 # Dependencies
 itx-docs/node_modules
