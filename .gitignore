@@ -20,3 +20,8 @@ itx-docs/.env.production.local
 itx-docs/npm-debug.log*
 itx-docs/yarn-debug.log*
 itx-docs/yarn-error.log*
+
+test.cpp
+test.itx
+
+cmake-build-debug/
