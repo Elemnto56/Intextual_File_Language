@@ -119,8 +119,6 @@ private:
             exit(1);
         }
 
-       //if (expr[e_pos].sub_type == INT && e_pos + 1 < expr.size()) return expr[++e_pos].value;
-
         return expr[e_pos].value;
     }
 

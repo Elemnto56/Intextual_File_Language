@@ -1,1 +1,3 @@
-output "Hello";
+int i = 5 + 5;
+output i;
+string x = "Hello"

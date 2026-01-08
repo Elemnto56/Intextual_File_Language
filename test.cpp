@@ -1,10 +1,16 @@
 // Ignore this file
 #include <iostream>
-#include <string>
+#include <vector>
+
+template <typename T>
+std::vector<std::string> operator<<(const std::vector<T> all, T test) {
+    all.push_back(test);
+    return all;
+}
 
 int main() {
-    std::string first = "I like // dogs";
-    std::string second = "//";
+    std::vector<std::string> all;
 
-    std::cout << (first.contains(second)) << std::endl;
+    all << "Hello";
+    for (int i{}; i < all.size(); i++) std::cout << all[i] << std::endl;
 }

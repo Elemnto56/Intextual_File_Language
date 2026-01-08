@@ -272,6 +272,7 @@ vector<Lex> lexer(vector<string> lines) {
             }
             case ';':
                 allTokens.push_back({
+                    .meta = ";",
                     .value = std::string{ch},
                     .type = SYMBOL,
                     .line = i+1

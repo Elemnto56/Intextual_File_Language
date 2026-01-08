@@ -9,7 +9,6 @@ void executor(vector<Instr> bc) {
     unordered_map<string, itx_types> symbols;
     cout << boolalpha;
 
-
     int i = 0;
     while (i < bc.size()) {
         switch (auto b = bc[i]; b.code) {
@@ -18,8 +17,14 @@ void executor(vector<Instr> bc) {
             symbols.insert({std::get<string>(b.value), stack.back()});
             stack.clear();
             break;
+        case ADD:
+
+            break;
         case PRINT:
-            visit([](auto&& value) {cout << value << endl;}, b.pull_type == VAR ? symbols[std::get<string>(b.value)] : b.value);
+            if (std::holds_alternative<string>(b.value) && std::get<string>(b.value) == "table") {
+                std::visit([](auto&& val) {cout << val << endl;}, stack.back());
+                stack.clear();
+            } else std::visit([](auto&& val) {cout << val << endl;}, b.value);
             break;
         default:
             goto loop_end;

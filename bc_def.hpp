@@ -14,11 +14,14 @@ enum BC {
     PULL,
     STORE,
     PRINT,
-    EXIT
+    EXIT,
+    ADD,
+    SUB,
+    MULT,
+    DIV, // Division as in math
 };
 
 struct Instr {
-    LexSubType pull_type;
     itx_types value;
     BC code;
 };

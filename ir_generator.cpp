@@ -1,8 +1,10 @@
 #include <iostream>
 
+#include "expr_engine.hpp"
 #include "ir_gen.hpp"
 
 using namespace std;
+
 vector<IR> ir_gen(vector<Lex> tokens) {
     vector<IR> all_ir;
 
@@ -23,38 +25,45 @@ vector<IR> ir_gen(vector<Lex> tokens) {
                 std::cerr << "Not a valid variable name\n line " << tokens[i].line;
                 exit(1);
             }
+            var_declare.l_type = VARIABLE;
 
             if (tokens[++i].type != OPERATOR && std::get<string>(tokens[i].value) != "=") callErr(MISSING_TOKEN, "Expected an '=' in this variable declaration", tokens[i].line);
 
             vector<Lex> expr;
-            while (tokens[i].type != SYMBOL && std::get<string>(tokens[i].value) != ";") expr.push_back(tokens[++i]);
-            //var_declare.rvalue
+            while (true) {  i++; if (std::holds_alternative<string>(tokens[i].value) && std::get<string>(tokens[i].value) == ";") break; expr.push_back(tokens[i]); }
+            var_declare.rvalue = Expression(expr).solve();
 
-            var_declare.metadata.insert({"wgo", "variable_declare"}); // wgo stands for "What's going on"
             all_ir.push_back(var_declare);
-
-            if (tokens[++i].type != SYMBOL && std::get<string>(tokens[i].value) == ";") callErr(MISSING_TOKEN, "Expected an ';' in this variable declaration", tokens[i].line);
+            if (tokens[i].meta != ";") callErr(MISSING_TOKEN, "Expected an ';' in this variable declaration", tokens[i].line);
         }
         else if (token.type == KEYWORD && std::get<string>(token.value) == "output") {
             i++;
-            if (tokens[i].type == VARIABLE)
-                all_ir.push_back({
-                    .rvalue = tokens[i].value,
-                    .lvalue = "output",
-                    .l_type = KEYWORD,
-                    .r_type = VAR,
-                    .line = tokens[i].line
-                });
-            else
-                all_ir.push_back({
-                    .rvalue = tokens[i].value,
-                    .lvalue = "output",
-                    .l_type = KEYWORD,
-                    .r_type = tokens[i].sub_type,
-                    .line = tokens[i].line
-                });
+            vector<Lex> expr;
+            bool var_include = false;
+            while (tokens[i].meta != ";") { if (tokens[i].type == VARIABLE) var_include = true; expr.push_back(tokens[i]); i++;}
 
-            if (tokens[++i].type != SYMBOL && std::get<string>(tokens[i].value) != ";") callErr(MISSING_TOKEN, "Expected an ';' in this print statement", tokens[i].line);
+            if (!var_include) {
+                auto rval = Expression(expr).solve();
+
+                all_ir.push_back({
+                    .rvalue = rval,
+                    .lvalue = "output",
+                    .l_type = KEYWORD,
+                    .r_type = static_cast<LexSubType>(rval.index()+1),
+                    .line = tokens[i].line
+                });
+            }
+            else {
+                all_ir.push_back({
+                    .metadata = {{"var_solve", expr}},
+                    .lvalue = "output",
+                    .l_type = KEYWORD,
+                    .r_type = MATH,
+                    .line = tokens[i].line
+                });
+            }
+
+            //if (tokens[++i].meta != ";") callErr(MISSING_TOKEN, "Expected an ';' in this print statement", tokens[i].line);
         }
 
         i++;

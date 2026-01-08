@@ -22,9 +22,10 @@ inline void callErr(ErrorType et, std::string err_desc, int line, int status_cod
     exit(status_code);
 }
 
+using ir_type = std::variant<std::string, int, float, bool, std::vector<Lex>>;
 struct IR {
     itx_types rvalue;
-    std::unordered_map<std::string, itx_types> metadata;
+    std::unordered_map<std::string, ir_type> metadata;
     std::string lvalue;
     LexMainType l_type;
     LexSubType r_type;
