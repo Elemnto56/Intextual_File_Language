@@ -28,10 +28,10 @@ vector<Instr> bc_gen(vector<IR> ir) {
                     case OPERATOR:
                         if ((lex_expr[++i].type == TYPE && lex_expr[i].sub_type != BUILT_IN) || lex_expr[i].type == VARIABLE) bc.push_back({lex_expr[i].value, PUSH});
                         switch (auto op = std::get<string>(lex_expr[i-1].value); op[0]) {
-                            case '+': bc.push_back({op, ADD}); break;
-                            case '-': bc.push_back({op, SUB}); break;
-                            case '/': bc.push_back({op, DIV}); break;
-                            default: bc.push_back({op, MULT});
+                            case '+': bc.push_back({op, MATH_, ADD}); break;
+                            case '-': bc.push_back({op, MATH_, SUB}); break;
+                            case '/': bc.push_back({op, MATH_, DIV}); break;
+                            default: bc.push_back({op, MATH_, MULT});
                         }
                         break;
                     default: cerr << "Not handled: developer error" << endl; exit(1);

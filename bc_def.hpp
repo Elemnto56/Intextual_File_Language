@@ -4,7 +4,6 @@
 
 #ifndef ITX_BC_DEF_HPP
 #define ITX_BC_DEF_HPP
-#include <any>
 #include <vector>
 
 #include "ir_gen.hpp"
@@ -15,6 +14,10 @@ enum BC {
     STORE,
     PRINT,
     EXIT,
+    MATH_
+};
+
+enum BC_SUB {
     ADD,
     SUB,
     MULT,
@@ -24,6 +27,7 @@ enum BC {
 struct Instr {
     itx_types value;
     BC code;
+    BC_SUB sub_code;
 };
 
 

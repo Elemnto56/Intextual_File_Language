@@ -2,6 +2,7 @@
 #define ITX_IR_GEN_HPP
 #include <iostream>
 #include <vector>
+#include <unordered_map>
 
 #include "lex_def.hpp"
 enum ErrorType {

@@ -1,5 +1,6 @@
 #include <iostream>
-
+#include <bits/valarray_after.h>
+#include <boost/regex.hpp>
 #include "ir_gen.hpp"
 #include "lex_def.hpp"
 
@@ -25,6 +26,7 @@ vector<Lex> lexer(vector<string> lines) {
         string line = lines[i];
         if (line.contains("//")) line = boost::regex_replace(line, boost::regex(R"(\/\/.+)"), "");
         if (line.empty() || ranges::all_of(line, [](unsigned char c){return isspace(c);})) { i++; continue; }
+        line.erase(line.begin(), ranges::find_if_not(line, [](unsigned char ch) {return isspace(ch);}));
 
         if (string pos_keyword = split_by_ws(line)[0]; contains(pos_keyword, {"while", "if", "else if", "else"})) {
             allTokens.push_back({
@@ -87,7 +89,7 @@ vector<Lex> lexer(vector<string> lines) {
                     .line = i+1
                 });
 
-                j += 1;
+                j += 2;
                 continue;
             }
 
@@ -251,28 +253,69 @@ vector<Lex> lexer(vector<string> lines) {
                 j++;
                 continue;
             }
-            case '(':
-                allTokens.push_back({
-                    .sub_type = L_PARA,
-                    .type = TYPE,
-                    .line = i+1
-                });
+            case '(': {
                 j++;
-                continue;
-            case ')':
-                allTokens.push_back({
-                    .sub_type = R_PARA,
-                    .type = TYPE,
-                    .line = i+1
-                });
-                j++;
-                continue;
-            case '{': {
+                vector<Lex> n_line;
+                auto findRPara = [&n_line](vector<Lex> expr) {
+                  for (int e_i{}; e_i < expr.size(); e_i++) if (expr[e_i].sub_type == R_PARA) {
+                      e_i++;
+                      while (e_i < expr.size()) {n_line.push_back(expr[e_i]); e_i++;}
+                      return true;
+                  }
+                  return false;
+                };
 
+                string raw_expr;
+                vector<Lex> expr;
+                while (j < line.size()) {raw_expr += line[j]; j++;}
+                expr = lexer(vector{raw_expr});
+                //TODO: Finalize grouping expressions with parathesis around them
+
+                j++;
+                continue;
             }
+            case '{': {
+                j++;
+                string half_line;
+                while (j < line.size()) {half_line += line[j]; j++;}
+                vector<Lex> end_line;
+                auto searchCurlEnd = [&end_line](vector<Lex> l) {
+                    for (int c_i{}; c_i < l.size(); c_i++) if (l[c_i].sub_type == R_CURL) {
+                        c_i++;
+                        while (c_i < l.size()) { end_line.push_back(l[c_i]); c_i++; }
+                        return true;
+                    }
+                    return false;
+                };
+
+                lines.insert(lines.begin()+ (++i), half_line);
+                vector<Lex> lex_lines, line_;
+                while (i < lines.size()) {
+                    line_ = lexer(vector{lines[i]});
+                    if (searchCurlEnd(line_)) break;
+                    for (const auto& lex : line_) lex_lines.push_back(lex);
+                    i++;
+                }
+                allTokens.push_back({
+                    .type = BODY,
+                    .scope = lex_lines,
+                    .line = i+1
+                });
+                for (const auto& lex : end_line) allTokens.push_back(lex);
+            }
+                goto cont_outer;
             case ';':
                 allTokens.push_back({
                     .meta = ";",
+                    .value = std::string{ch},
+                    .type = SYMBOL,
+                    .line = i+1
+                });
+                j++;
+                continue;
+            case '}':
+                allTokens.push_back({
+                    .sub_type = R_CURL,
                     .value = std::string{ch},
                     .type = SYMBOL,
                     .line = i+1
@@ -288,6 +331,7 @@ vector<Lex> lexer(vector<string> lines) {
                 j++;
             }
         }
+        cont_outer:;
         i++;
         j = 0;
     }

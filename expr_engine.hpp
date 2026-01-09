@@ -134,7 +134,7 @@ private:
         }
     }
 public:
-    Expression(vector<Lex> expr, unordered_map<string, itx_types> vars = {}) : variables(std::move(vars)), expr(std::move(expr)) {}
+    Expression(vector<Lex> expr, std::unordered_map<string, itx_types> vars = {}) : variables(std::move(vars)), expr(std::move(expr)) {}
 
     itx_types solve() {
         return parseOr();

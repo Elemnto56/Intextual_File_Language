@@ -7,7 +7,7 @@
 #include "ir_gen.hpp"
 #include "lex_def.hpp"
 
-#define DEBUG 0
+#define DEBUG 1
 
 int main(int argc, char* argv[]) {
     if (argc > 2 || argc < 2) {std::cerr << "Too many or too little args provided\n"; return 1;}
@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
         std::visit([](auto&& value){std::cout << value << std::endl;}, l.value);
         std::cout << "====================\n";
     }
-
+    return 0;
     std::cout << "=====IR=====" << std::endl;
 
     for (auto i : ir) {
@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
     std::cout << "====Bytecode====" << std::endl;
 
     for (auto bc : b) {
-        std::cout << bc.code << " " << bc.pull_type << " ";
+        std::cout << bc.code << " " << bc.sub_code << " ";
         std::visit([](auto&& val) {std::cout << val << std::endl;}, bc.value);
     }
 #else
