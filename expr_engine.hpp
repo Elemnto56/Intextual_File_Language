@@ -105,8 +105,8 @@ private:
             auto right = parsePrimary();
 
             if (left.index() == right.index() && (left.index() == 1 || left.index() == 2)) {
-                if (operator_ == "*") if (left.index() == 1) left = std::get<int>(left) * std::get<int>(right); else left = std::get<float>(left) * std::get<float>(right);
-                if (operator_ == "/") if (left.index() == 1) left = std::get<int>(left) / std::get<int>(right); else left = std::get<float>(left) / std::get<float>(right);
+                if (operator_ == "*") left.index() == 1 ? left = std::get<int>(left) * std::get<int>(right) : left = std::get<float>(left) * std::get<float>(right);
+                if (operator_ == "/") left.index() == 1 ? left = std::get<int>(left) / std::get<int>(right) : left = std::get<float>(left) / std::get<float>(right);
             }
         }
 
@@ -128,9 +128,20 @@ private:
         switch (left.index()) {
         case 0:
             if (op == "==") return std::get<string>(left) == std::get<string>(right);
+            if (op == "!=") return std::get<string>(left) != std::get<string>(right);
+            break;
         case 1:
             if (op == "==") return std::get<int>(left) == std::get<int>(right);
-        default: return false;
+            if (op == "!=") return std::get<int>(left) != std::get<int>(right);
+            break;
+        case 2:
+            if (op == "==") return std::get<float>(left) == std::get<float>(right);
+            if (op == "!=") return std::get<float>(left) != std::get<float>(right);
+            break;
+        case 3:
+            if (op == "==") return std::get<bool>(left) == std::get<bool>(right);
+            if (op == "!=") return std::get<bool>(left) != std::get<bool>(right);
+            break;
         }
     }
 public:

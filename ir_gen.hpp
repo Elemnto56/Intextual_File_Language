@@ -23,7 +23,8 @@ inline void callErr(ErrorType et, std::string err_desc, int line, int status_cod
     exit(status_code);
 }
 
-using ir_type = std::variant<std::string, int, float, bool, std::vector<Lex>>;
+struct IR;
+using ir_type = std::variant<std::vector<Lex>, std::vector<IR>>;
 struct IR {
     itx_types rvalue;
     std::unordered_map<std::string, ir_type> metadata;

@@ -16,7 +16,7 @@ using itx_types = std::variant<std::string, int, float, bool>;
 bool contains(std::string test, std::vector<std::string> finds);
 std::vector<std::string> split_by_ws(std::string test);
 
-enum LexSubType : int {
+enum LexSubType {
     BUILT_IN,
     STRING,
     INT,

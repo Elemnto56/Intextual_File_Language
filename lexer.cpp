@@ -1,5 +1,4 @@
 #include <iostream>
-#include <bits/valarray_after.h>
 #include <boost/regex.hpp>
 #include "ir_gen.hpp"
 #include "lex_def.hpp"
@@ -23,14 +22,14 @@ vector<Lex> lexer(vector<string> lines) {
     int j;
     int i = j = 0;
     while (i < lines.size()) {
-        string line = lines[i];
+        string line= lines[i];
         if (line.contains("//")) line = boost::regex_replace(line, boost::regex(R"(\/\/.+)"), "");
         if (line.empty() || ranges::all_of(line, [](unsigned char c){return isspace(c);})) { i++; continue; }
         line.erase(line.begin(), ranges::find_if_not(line, [](unsigned char ch) {return isspace(ch);}));
 
         if (string pos_keyword = split_by_ws(line)[0]; contains(pos_keyword, {"while", "if", "else if", "else"})) {
             allTokens.push_back({
-                .value = pos_keyword,
+                .meta = pos_keyword,
                 .type = L_KEYWORD,
                 .line = i+1
             });
@@ -42,7 +41,7 @@ vector<Lex> lexer(vector<string> lines) {
         // array's value. The parser should be aware of that and parse accordingly.
         else if (contains(pos_keyword, {"int", "string", "bool", "arr", "float"})) {
             allTokens.push_back({
-                .value = pos_keyword,
+                .meta = pos_keyword,
                 .type = TYPE,
                 .line = i+1
             });
@@ -51,7 +50,7 @@ vector<Lex> lexer(vector<string> lines) {
 
         else if (contains(pos_keyword, {"output"})) {
             allTokens.push_back({
-                .value = pos_keyword,
+                .meta = pos_keyword,
                 .type = KEYWORD,
                 .line = i+1
             });
@@ -73,7 +72,7 @@ vector<Lex> lexer(vector<string> lines) {
                 continue;
             }
 
-            if (j+1 < line.size() && contains(line.substr(j, 2), {">=", "<=", "==", "||", "&&", "%="})) {
+            if (j+1 < line.size() && contains(line.substr(j, 2), {">=", "<=", "==", "||", "&&", "!="})) {
                 line.substr(j, 2) == "&&" || line.substr(j, 2) == "||" ?
                 allTokens.push_back({
                     .sub_type = BOOL,
@@ -93,7 +92,7 @@ vector<Lex> lexer(vector<string> lines) {
                 continue;
             }
 
-            if (j+1 < line.size() && contains(line.substr(j, 2), {"+=", "-=", "*=", "/="})) {
+            if (j+1 < line.size() && contains(line.substr(j, 2), {"+=", "-=", "*=", "/=", "%="})) {
                 allTokens.push_back({
                     .sub_type = MATH,
                     .value = line.substr(j, 2),
@@ -201,6 +200,26 @@ vector<Lex> lexer(vector<string> lines) {
             }
 
             switch (ch) {
+            case '+':
+            case '-':
+            case '/':
+            case '*':
+                allTokens.push_back({
+                    .sub_type = MATH,
+                    .value = std::string{ch},
+                    .type = OPERATOR,
+                    .line = i+1
+                });
+                j++;
+                continue;
+            case '>':
+            case '<':
+                allTokens.push_back({
+                    .sub_type = COMPARE,
+                    .value = std::string{ch},
+                    .type = OPERATOR,
+                    .line = i+1
+                });
             case '=':
                 allTokens.push_back({
                     .value = std::string{ch},
@@ -216,10 +235,12 @@ vector<Lex> lexer(vector<string> lines) {
                 while (j < line.size()) {
                     if (line[j] == '"') break;
 
-                    if (string escape = line.substr(j, 2); escape == "\\n") { res += "\n"; j += 2; }
+                    if (string escape = line.substr(j, 2); escape == "\\n")  {res += "\n"; j += 2;}
                     else if (escape == "\\r") { res += "\r"; j+=2; }
                     else if (escape == "\\\"") { res += "\""; j += 2;}
                     else if (escape == "\\\\") { res += "\\"; j += 2;}
+                    else if (escape == "\\t") { res += "\t"; j += 2;}
+
 
                     if (line[j] == '"') break; // A second one was included because the next j iteration may range out and not capture the last character
                     res += line[j];
@@ -255,31 +276,42 @@ vector<Lex> lexer(vector<string> lines) {
             }
             case '(': {
                 j++;
-                vector<Lex> n_line;
-                auto findRPara = [&n_line](vector<Lex> expr) {
-                  for (int e_i{}; e_i < expr.size(); e_i++) if (expr[e_i].sub_type == R_PARA) {
-                      e_i++;
-                      while (e_i < expr.size()) {n_line.push_back(expr[e_i]); e_i++;}
-                      return true;
-                  }
-                  return false;
+                vector<Lex> fixed_expr, l_line, end_line;
+                auto searchExprEnd = [&fixed_expr, &end_line](vector<Lex> l){
+                    for (int e_i{}; e_i < l.size(); e_i++) {
+                        if (l[e_i].sub_type == R_PARA) {
+                            e_i++;
+                            while (e_i < l.size()) {end_line.push_back(l[e_i]); e_i++;}
+                            return true;
+                        }
+                        fixed_expr.push_back(l[e_i]);
+                    }
+                    return false;
                 };
 
-                string raw_expr;
-                vector<Lex> expr;
-                while (j < line.size()) {raw_expr += line[j]; j++;}
-                expr = lexer(vector{raw_expr});
-                //TODO: Finalize grouping expressions with parathesis around them
+                line = line.substr(j, line.size()-j);
+                while (i < lines.size()) {
+                    l_line = lexer(vector{line});
+                    if (searchExprEnd(l_line)) break;
+                    line = lines[++i];
+                }
 
-                j++;
-                continue;
+                allTokens.push_back({
+                    .sub_type = BOOL,
+                    .meta = "expression",
+                    .type = TYPE,
+                    .scope = fixed_expr,
+                    .line = i+1
+                });
+                for (const auto& lex : end_line) allTokens.push_back(lex);
             }
+            goto cont_outer;
             case '{': {
                 j++;
                 string half_line;
                 while (j < line.size()) {half_line += line[j]; j++;}
                 vector<Lex> end_line;
-                auto searchCurlEnd = [&end_line](vector<Lex> l) {
+                auto searchScopeEnd = [&end_line](vector<Lex> l) {
                     for (int c_i{}; c_i < l.size(); c_i++) if (l[c_i].sub_type == R_CURL) {
                         c_i++;
                         while (c_i < l.size()) { end_line.push_back(l[c_i]); c_i++; }
@@ -292,10 +324,11 @@ vector<Lex> lexer(vector<string> lines) {
                 vector<Lex> lex_lines, line_;
                 while (i < lines.size()) {
                     line_ = lexer(vector{lines[i]});
-                    if (searchCurlEnd(line_)) break;
                     for (const auto& lex : line_) lex_lines.push_back(lex);
+                    if (searchScopeEnd(line_)) break;
                     i++;
                 }
+                lex_lines.pop_back(); // remove }
                 allTokens.push_back({
                     .type = BODY,
                     .scope = lex_lines,
@@ -316,6 +349,15 @@ vector<Lex> lexer(vector<string> lines) {
             case '}':
                 allTokens.push_back({
                     .sub_type = R_CURL,
+                    .value = std::string{ch},
+                    .type = SYMBOL,
+                    .line = i+1
+                });
+                j++;
+                continue;
+            case ')':
+                allTokens.push_back({
+                    .sub_type = R_PARA,
                     .value = std::string{ch},
                     .type = SYMBOL,
                     .line = i+1

@@ -4,8 +4,6 @@
 
 #ifndef ITX_BC_DEF_HPP
 #define ITX_BC_DEF_HPP
-#include <vector>
-
 #include "ir_gen.hpp"
 
 enum BC {
@@ -14,7 +12,13 @@ enum BC {
     STORE,
     PRINT,
     EXIT,
-    MATH_
+    MATH_,
+    OR,
+    AND,
+    GREATER_THAN,
+    IS_EQUAL_TO,
+    LESS_THAN,
+    IF_TRUE
 };
 
 enum BC_SUB {
@@ -22,15 +26,17 @@ enum BC_SUB {
     SUB,
     MULT,
     DIV, // Division as in math
+    IS_EQUAL
 };
 
 struct Instr {
     itx_types value;
     BC code;
     BC_SUB sub_code;
+    int jump = -1;
 };
 
 
 std::vector<Instr> bc_gen(std::vector<IR> ir);
-void executor(std::vector<Instr> bc);
+int executor(std::vector<Instr> bc);
 #endif //ITX_BC_DEF_HPP
