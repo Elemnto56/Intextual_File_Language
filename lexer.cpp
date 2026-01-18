@@ -11,12 +11,12 @@ bool contains(string test, vector<string> finds) {
 
 vector<string> split_by_ws(string test) {
     vector<string> res;
-    auto b_itr = boost::sregex_iterator(test.begin(), test.end(),  boost::regex(R"([^\s]+)"));
+    auto b_itr = boost::sregex_iterator(test.begin(), test.end(),  boost::regex(R"([^\s|\(]+)"));
     while (b_itr != boost::sregex_iterator()) {res.push_back(b_itr->str()); ++b_itr;}
     return res;
 }
 
-vector<Lex> lexer(vector<string> lines) {
+vector<Lex> lexer(vector<string> lines, char stop_at) {
     vector<Lex> allTokens{};
 
     int j;
@@ -92,7 +92,7 @@ vector<Lex> lexer(vector<string> lines) {
                 continue;
             }
 
-            if (j+1 < line.size() && contains(line.substr(j, 2), {"+=", "-=", "*=", "/=", "%="})) {
+            if (j+1 < line.size() && contains(line.substr(j, 2), {"+=", "-=", "*=", "/=", "%=", "++", "--"})) {
                 allTokens.push_back({
                     .sub_type = MATH,
                     .value = line.substr(j, 2),
@@ -276,36 +276,21 @@ vector<Lex> lexer(vector<string> lines) {
             }
             case '(': {
                 j++;
-                vector<Lex> fixed_expr, l_line, end_line;
-                auto searchExprEnd = [&fixed_expr, &end_line](vector<Lex> l){
-                    for (int e_i{}; e_i < l.size(); e_i++) {
-                        if (l[e_i].sub_type == R_PARA) {
-                            e_i++;
-                            while (e_i < l.size()) {end_line.push_back(l[e_i]); e_i++;}
-                            return true;
-                        }
-                        fixed_expr.push_back(l[e_i]);
-                    }
-                    return false;
-                };
-
-                line = line.substr(j, line.size()-j);
-                while (i < lines.size()) {
-                    l_line = lexer(vector{line});
-                    if (searchExprEnd(l_line)) break;
-                    line = lines[++i];
-                }
-
+                vector str_expr = {line.substr(j, line.size())};
+                for (const auto& l : lines) str_expr.push_back(l); //NOTE: This may need to be refactored in the future
+                auto expr_lex = lexer(str_expr, ')');
+                j += expr_lex.back().line;
+                expr_lex.pop_back();
                 allTokens.push_back({
                     .sub_type = BOOL,
                     .meta = "expression",
                     .type = TYPE,
-                    .scope = fixed_expr,
+                    .scope = expr_lex,
                     .line = i+1
                 });
-                for (const auto& lex : end_line) allTokens.push_back(lex);
             }
-            goto cont_outer;
+            j++;
+            continue;
             case '{': {
                 j++;
                 string half_line;
@@ -347,6 +332,10 @@ vector<Lex> lexer(vector<string> lines) {
                 j++;
                 continue;
             case '}':
+                if (stop_at == '}') {
+                    allTokens.push_back({.line = j});
+                    goto end;
+                }
                 allTokens.push_back({
                     .sub_type = R_CURL,
                     .value = std::string{ch},
@@ -356,6 +345,8 @@ vector<Lex> lexer(vector<string> lines) {
                 j++;
                 continue;
             case ')':
+                // The last token before closure has only a line field equal to j in order to correctly parse the end of expressions
+                if (stop_at == ')') {allTokens.push_back({.line = j});goto end;}
                 allTokens.push_back({
                     .sub_type = R_PARA,
                     .value = std::string{ch},
@@ -377,6 +368,7 @@ vector<Lex> lexer(vector<string> lines) {
         i++;
         j = 0;
     }
+    end:;
 
     return allTokens;
 }

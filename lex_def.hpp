@@ -53,5 +53,5 @@ struct Lex {
     int line;
 };
 
-std::vector<Lex> lexer(std::vector<std::string> lines);
+std::vector<Lex> lexer(std::vector<std::string> lines, char stop_at = '~');
 #endif //INTEXTUAL_FILE_LANGUAGE_DEF_HPP

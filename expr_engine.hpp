@@ -5,6 +5,7 @@
 #ifndef ITX_EXPR_ENGINE_HPP
 #define ITX_EXPR_ENGINE_HPP
 #include <iostream>
+#include <source_location>
 #include <vector>
 
 #include "lex_def.hpp"
@@ -119,6 +120,18 @@ private:
             exit(1);
         }
 
+        if (expr[e_pos].meta == "expression") {
+
+            expr[e_pos].value = Expression(expr[e_pos].scope).solve();
+            if (auto new_val = expr[e_pos].value.index(); new_val == 0) expr[e_pos].sub_type = STRING;
+            else if (new_val == 1) expr[e_pos].sub_type = INT;
+            else if (new_val == 2) expr[e_pos].sub_type = FLOAT;
+            else expr[e_pos].sub_type = BOOL;
+
+            if (e_pos+1 < expr.size() && expr[e_pos+1].type != OPERATOR && expr[e_pos+1].type == TYPE && expr[e_pos+1].sub_type != BUILT_IN) expr.insert(expr.begin()+(e_pos+1), {.sub_type = MATH, .value = "*", .type = OPERATOR, .line = expr[e_pos].line});
+            if (e_pos-1 >= 0 && expr[e_pos-1].type != OPERATOR && expr[e_pos-1].type == TYPE && expr[e_pos-1].sub_type != BUILT_IN) expr.insert(expr.begin()+(e_pos-1), {.sub_type = MATH, .value = "*", .type = OPERATOR, .line = expr[e_pos].line});
+        }
+
         return expr[e_pos].value;
     }
 
@@ -129,7 +142,7 @@ private:
         case 0:
             if (op == "==") return std::get<string>(left) == std::get<string>(right);
             if (op == "!=") return std::get<string>(left) != std::get<string>(right);
-            break;
+            //callErr(BAD_TYPE, "Invalid operation with two strings", expr[0].line);
         case 1:
             if (op == "==") return std::get<int>(left) == std::get<int>(right);
             if (op == "!=") return std::get<int>(left) != std::get<int>(right);

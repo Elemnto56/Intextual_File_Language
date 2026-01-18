@@ -117,6 +117,17 @@ vector<IR> ir_gen(vector<Lex> tokens) {
                 .line = token.line,
             });
         }
+        else if (token.type == VARIABLE ||(token.type == OPERATOR && token.sub_type == MATH)) {
+            if (token.type == OPERATOR) {
+                if (tokens[++i].type != VARIABLE) exit(1); //TODO: Call error
+                if (tokens[i].sub_type != INT || tokens[i].sub_type != FLOAT) exit(1);
+
+                //TODO: Support re-assignments (i.e. x += 1, ++x, x = 5)
+               // all_ir.push_back({
+                 //   .metadata = {{"incr", ""}}
+                //});
+            }
+        }
 
         i++;
     }

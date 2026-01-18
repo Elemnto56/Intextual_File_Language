@@ -18,7 +18,8 @@ enum BC {
     GREATER_THAN,
     IS_EQUAL_TO,
     LESS_THAN,
-    IF_TRUE
+    IF_TRUE,
+    SCOPE_END
 };
 
 enum BC_SUB {

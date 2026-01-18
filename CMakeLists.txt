@@ -20,7 +20,5 @@ add_executable(itx
         ir_gen.hpp
         ir_generator.cpp
         vm.cpp
-        evaluator.hpp
-
 )
 target_link_libraries(itx ${Boost_LIBRARIES})

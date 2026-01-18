@@ -8,7 +8,7 @@
 #include "lex_def.hpp"
 
 #define DEBUG 0
-//TODO: make expressions recognize and use variables
+
 int main(int argc, char* argv[]) {
     if (argc > 2 || argc < 2) {std::cerr << "Too many or too little args provided\n"; return 1;}
     if (!std::filesystem::exists(argv[1])) {std::cerr << argv[1] << " does not exist\n"; return 1;}

@@ -28,35 +28,32 @@ vector<Instr> bc_gen(vector<IR> ir) {
         case LOGIC: {
             auto lex_expr = std::get<vector<Lex>>(iri.metadata["expression"]);
             for (int i{}; i < lex_expr.size(); i++) {
-                if (lex_expr[i].type == TYPE && lex_expr[i].sub_type != BUILT_IN) bc.push_back({lex_expr[i].value, PUSH});
-                switch (lex_expr[i].type) {
-                case VARIABLE: bc.push_back({lex_expr[i].value, PULL}); break;
-                case TYPE:
-                    if (lex_expr[i].sub_type != BUILT_IN)
-                        bc.push_back({lex_expr[i].value, PUSH});
-                    else { cerr << "Unexpected value in this statement on line " << lex_expr[i].line << endl; exit(1); }
-                    break;
-                case OPERATOR:
-                    if (lex_expr[i].sub_type == BOOL) {
-                        if (auto op = std::get<string>(lex_expr[i].value); op == "&&") bc.push_back({.code = AND});
-                        else if (op == "||") bc.push_back({.code = OR});
+                if (auto lex = lex_expr[i]; (lex.type == TYPE && lex.sub_type != BUILT_IN) || lex.type == VARIABLE) {
+                    if (auto op = bc.back(); op.jump == -2) {
+                        bc.pop_back();
+                        lex.type == VARIABLE ? bc.push_back({lex.value, PULL}) : bc.push_back({lex.value, PUSH});
+                        bc.push_back(op);
                     }
-                    else if (lex_expr[i].sub_type == COMPARE) {
-                        if (auto op = std::get<string>(lex_expr[i].value); op == "==") bc.push_back({.code = IS_EQUAL_TO});
-                        else if (op == ">" || op == ">=") bc.push_back({.code = GREATER_THAN, .sub_code = op == ">=" ? IS_EQUAL : ADD});
-                        else if (op == "<" || op == "<=") bc.push_back({.code = LESS_THAN, .sub_code = op == "<=" ? IS_EQUAL : ADD});
+                    else lex.type == VARIABLE ? bc.push_back({lex.value, PULL}) : bc.push_back({lex.value, PUSH});
+                }
+                else if (lex.type == OPERATOR) {
+                    if (lex.sub_type == BOOL) {
+                        if (auto op = std::get<string>(lex.value); op == "&&") bc.push_back({.code = AND, .jump = -2});
+                        else if (op == "||") bc.push_back({.code = OR, .jump = -2});
                     }
-                    else if (lex_expr[i].sub_type == MATH)
-                        if (std::get<string>(lex_expr[i].value).size() == 1)
-                            switch (auto op = std::get<string>(lex_expr[i].value); op[0]) {
-                            case '+': bc.push_back({op, MATH_, ADD}); break;
-                            case '-': bc.push_back({op, MATH_, SUB}); break;
-                            case '/': bc.push_back({op, MATH_, DIV}); break;
-                            default: bc.push_back({op, MATH_, MULT});
+                    else if (lex.sub_type == COMPARE) {
+                        if (auto op = std::get<string>(lex.value); op == "==") bc.push_back({.code = IS_EQUAL_TO, .jump = -2});
+                        else if (op == ">" || op == ">=") bc.push_back({.code = GREATER_THAN, .sub_code = op == ">=" ? IS_EQUAL : ADD, .jump = -2});
+                        else if (op == "<" || op == "<=") bc.push_back({.code = LESS_THAN, .sub_code = op == "<=" ? IS_EQUAL : ADD, .jump = -2});
+                    }
+                    else if (lex.sub_type == MATH)
+                        if (std::get<string>(lex.value).size() == 1)
+                            switch (auto op = std::get<string>(lex.value); op[0]) {
+                            case '+': bc.push_back({op, MATH_, ADD, -2}); break;
+                            case '-': bc.push_back({op, MATH_, SUB, -2}); break;
+                            case '/': bc.push_back({op, MATH_, DIV, -2}); break;
+                            default: bc.push_back({op, MATH_, MULT, -2});
                             }
-
-                    break;
-                default: cerr << "Not handled: developer error" << endl; exit(1);
                 }
             }
         }

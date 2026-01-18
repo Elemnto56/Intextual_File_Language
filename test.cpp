@@ -1,11 +1,10 @@
 // Ignore this file
+#include <bits/stdc++.h>
 #include <iostream>
 #include <vector>
 
-int add(int x, int y) {
-    return x + y;
-}
-
 int main() {
-    std::cout << add(5, 5) << std::endl;
+    std::vector x = {1, 2, 3};
+    std::rotate(x.begin()+1, x.begin()+2, x.end());
+    for (const int i : x) std::cout << i << std::endl;
 }

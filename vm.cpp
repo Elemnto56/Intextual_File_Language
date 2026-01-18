@@ -6,7 +6,9 @@
 using namespace std;
 int executor(vector<Instr> bc) {
     vector<itx_types> stack;
-    unordered_map<string, itx_types> symbols;
+    vector<unordered_map<string, itx_types>> scope{{}};
+    int c_scope{};
+
     cout << boolalpha;
 
     int i{};
@@ -16,10 +18,10 @@ int executor(vector<Instr> bc) {
         operand2 = stack.size() == 2 ? stack[1] : "";
 
         switch (auto b = bc[i]; b.code) {
-        case PULL: stack.push_back(symbols[std::get<string>(b.value)]); break;
+        case PULL: stack.push_back(scope[c_scope][std::get<string>(b.value)]); break;
         case PUSH: stack.push_back(b.value); break;
         case STORE:
-            symbols.insert({std::get<string>(b.value), stack.back()});
+            scope[c_scope].insert({std::get<string>(b.value), stack.back()});
             stack.clear();
             break;
         case IF_TRUE:
@@ -28,10 +30,13 @@ int executor(vector<Instr> bc) {
                 if (!std::get<bool>(stack.back())) {i = b.jump; continue;}
             }
             else { if (!std::get<bool>(b.value)) {i = b.jump; continue;} }
+            bc.insert(bc.begin()+(b.jump-1), {.code = SCOPE_END});
+            scope.emplace_back();
+            c_scope++;
             break;
         case MATH_:
-            if (std::holds_alternative<string>(operand1) && symbols.contains(std::get<string>(operand1))) operand1 = symbols[std::get<string>(operand1)];
-            if (std::holds_alternative<string>(operand2) && symbols.contains(std::get<string>(operand2))) operand2 = symbols[std::get<string>(operand2)];
+            if (std::holds_alternative<string>(operand1) && scope[c_scope].contains(std::get<string>(operand1))) operand1 = scope[c_scope][std::get<string>(operand1)];
+            if (std::holds_alternative<string>(operand2) && scope[c_scope].contains(std::get<string>(operand2))) operand2 = scope[c_scope][std::get<string>(operand2)];
             switch (b.sub_code) {
             case ADD:
                     switch (operand1.index()) {
@@ -111,8 +116,8 @@ int executor(vector<Instr> bc) {
               default: return std::get<bool>(front) == std::get<bool>(back);
               }
             };
-            if (stack.front().index() == 1 || stack.front().index() == 2 &&stack.back().index() == 1 || stack.back().index() == 2) res = stack.front().index() == 1 && stack.back().index() == 2 ? std::get<int>(stack.front()) == std::get<float>(stack.back()) : std::get<float>(stack.front()) == std::get<int>(stack.back());
-            else if (stack.front().index() == stack.back().index()) res = resolve();
+            if (operand1.index() == 1 && operand2.index() == 2 || operand1.index() == 2 && operand2.index() == 1) res = operand1.index() == 1 && operand2.index() == 2 ? std::get<int>(operand1) == std::get<float>(operand2) : std::get<float>(operand1) == std::get<int>(operand2);
+            else if (operand1.index() == operand2.index()) res = resolve();
             else {cerr << "Was not booleans, could not compare\n"; return 1;}
 
             stack.clear();
@@ -166,6 +171,10 @@ int executor(vector<Instr> bc) {
                     stack.clear();
                 } else std::visit([](auto&& val) {cout << val << endl;}, b.value);
                 break;
+        case SCOPE_END:
+            scope.pop_back();
+            c_scope--;
+            break;
         default:
             goto loop_end;
         }
