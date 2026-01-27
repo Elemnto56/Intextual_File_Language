@@ -53,5 +53,26 @@ struct Lex {
     int line;
 };
 
+inline std::string resolve(const itx_types& t) {
+    switch (t.index()) {
+    case 0: return "string";
+    case 1: return "int";
+    case 2: return "float";
+    default: return "bool";
+    }
+}
+
+inline std::unordered_map<LexSubType, std::string> type_look {
+    {STRING, "string"},
+    {INT, "int"},
+    {FLOAT, "float"},
+    {BOOL, "bool"}
+};
+
+inline void callErr(std::string_view err_desc, const int line, const int status_code = 1) {
+    std::cerr << "line: " << line << std::endl
+    << err_desc << std::endl;
+    exit(status_code);
+}
 std::vector<Lex> lexer(std::vector<std::string> lines, char stop_at = '~');
 #endif //INTEXTUAL_FILE_LANGUAGE_DEF_HPP

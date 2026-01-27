@@ -18,158 +18,107 @@ int executor(vector<Instr> bc) {
         operand2 = stack.size() == 2 ? stack[1] : "";
 
         switch (auto b = bc[i]; b.code) {
-        case PULL: stack.push_back(scope[c_scope][std::get<string>(b.value)]); break;
+        case PULL: stack.push_back(scope[c_scope][get<string>(b.value)]); break;
         case PUSH: stack.push_back(b.value); break;
         case STORE:
-            scope[c_scope].insert({std::get<string>(b.value), stack.back()});
+            if (scope[c_scope].contains(std::get<string>(b.value))) scope[c_scope][std::get<string>(b.value)] = stack.back();
+            else scope[c_scope].insert({get<string>(b.value), stack.back()});
             stack.clear();
             break;
         case IF_TRUE:
-            if (std::holds_alternative<string>(b.value) && std::get<string>(b.value) == "table") {
-                if (!std::holds_alternative<bool>(stack.back())) {cerr << "Expected a boolean but didn't receive one\n"; return  1;}
-                if (!std::get<bool>(stack.back())) {i = b.jump; continue;}
+            if (holds_alternative<string>(b.value) && get<string>(b.value) == "table") {
+                if (!holds_alternative<bool>(stack.back())) {cerr << "Expected a boolean but didn't receive one\n"; return  1;}
+                if (!get<bool>(stack.back())) {i = b.jump; continue;}
             }
-            else { if (!std::get<bool>(b.value)) {i = b.jump; continue;} }
+            else { if (!get<bool>(b.value)) {i = b.jump; continue;} }
             bc.insert(bc.begin()+(b.jump-1), {.code = SCOPE_END});
-            scope.emplace_back();
+            scope.emplace_back(scope[c_scope]);
             c_scope++;
             break;
         case MATH_:
-            if (std::holds_alternative<string>(operand1) && scope[c_scope].contains(std::get<string>(operand1))) operand1 = scope[c_scope][std::get<string>(operand1)];
-            if (std::holds_alternative<string>(operand2) && scope[c_scope].contains(std::get<string>(operand2))) operand2 = scope[c_scope][std::get<string>(operand2)];
-            switch (b.sub_code) {
-            case ADD:
-                    switch (operand1.index()) {
-                    case 0:
-                        if (!std::holds_alternative<string>(operand2)) {cerr<< "Un handled" << endl; return 1;}
-                        stack.clear();
-                        stack.emplace_back(std::get<string>(operand1)+std::get<string>(operand2));
-                        break;
-                    case 1:
-                    case 2:
-                        stack.clear();
-                        if (operand1.index() == operand2.index()) stack.emplace_back((operand1.index() == 1 ? std::get<int>(operand1) : std::get<float>(operand1)) + (operand2.index() == 1 ? std::get<int>(operand2) : std::get<float>(operand2)));
-                        else stack.emplace_back(operand1.index() == 1 ? static_cast<float>(std::get<int>(operand1)) + std::get<float>(operand2) : std::get<float>(operand1) + static_cast<float>(std::get<int>(operand2)));
-                        break;
-                    default:
-                        cerr << "Cannot add two bools" << endl;
-                        return 1;
-                    }
-                break;
-            case SUB:
-                switch (operand1.index()) {
-                case 1:
-                case 2:
-                    stack.clear();
-                    if (operand1.index() == operand2.index()) stack.emplace_back((operand1.index() == 1 ? std::get<int>(operand1) : std::get<float>(operand1)) - (operand2.index() == 1 ? std::get<int>(operand2) : std::get<float>(operand2)));
-                    else stack.emplace_back(operand1.index() == 1 ? static_cast<float>(std::get<int>(operand1)) - std::get<float>(operand2) : std::get<float>(operand1) - static_cast<float>(std::get<int>(operand2)));
+            if (holds_alternative<string>(operand1) && scope[c_scope].contains(get<string>(operand1))) operand1 = scope[c_scope][get<string>(operand1)];
+            if (holds_alternative<string>(operand2) && scope[c_scope].contains(get<string>(operand2))) operand2 = scope[c_scope][get<string>(operand2)];
+            
+            visit([b, &stack](auto&& op1, auto&& op2) {
+                using L = decay_t<decltype(op1)>;
+                using R = decay_t<decltype(op2)>;
+                if constexpr (is_same_v<L, int> && is_same_v<R, float>) op1 = static_cast<float>(op1);
+                if constexpr (is_same_v<R, int> && is_same_v<L, float>) op2 = static_cast<float>(op2);
+                
+                stack.clear();
+                if constexpr (is_same_v<L, R>)
+                switch (b.sub_code) {
+                case ADD: stack.emplace_back(op1 + op2); break;
+                case SUB: 
+                    if constexpr (is_same_v<L, string>) callErr("Could not perform a subtraction between two strings", -1);
+                    else stack.emplace_back(op1 - op2); 
+                    break;
+                case DIV:
+                    if constexpr (is_same_v<L, string>) callErr("Could not perform division between two strings", -1);
+                    else stack.emplace_back(op1 / op2);
                     break;
                 default:
-                    cerr << "Either a string or bool was attempted to be subtracted by each other" << endl;
-                    return 1;
-                }
-                break;
-            case DIV:
-                switch (operand1.index()) {
-                case 1:
-                case 2:
-                    stack.clear();
-                    if (operand1.index() == operand2.index()) stack.emplace_back((operand1.index() == 1 ? std::get<int>(operand1) : std::get<float>(operand1)) / (operand2.index() == 1 ? std::get<int>(operand2) : std::get<float>(operand2)));
-                    else stack.emplace_back(operand1.index() == 1 ? static_cast<float>(std::get<int>(operand1)) / std::get<float>(operand2) : std::get<float>(operand1) / static_cast<float>(std::get<int>(operand2)));
+                    if constexpr (is_same_v<L, string>) callErr("Could not perform multiplication between two strings", -1);
+                    else stack.emplace_back(op1 * op2);
                     break;
-                default:
-                    cerr << "Either a string or bool was attempted to be divided by each other" << endl;
-                    return 1;
                 }
+            }, operand1, operand2);
                 break;
-            default:
-                switch (operand1.index()) {
-                case 1:
-                case 2:
-                    stack.clear();
-                    if (operand1.index() == operand2.index()) stack.emplace_back((operand1.index() == 1 ? std::get<int>(operand1) : std::get<float>(operand1)) * (operand2.index() == 1 ? std::get<int>(operand2) : std::get<float>(operand2)));
-                    else stack.emplace_back(operand1.index() == 1 ? static_cast<float>(std::get<int>(operand1)) * std::get<float>(operand2) : std::get<float>(operand1) * static_cast<float>(std::get<int>(operand2)));
-                    break;
-                default:
-                    cerr << "Either a string or bool was attempted to be multiplied by each other" << endl;
-                    return 1;
-                }
-            }
-            break;
         case OR:
-        case AND: {
-            if (!std::holds_alternative<bool>(stack.front()) || !std::holds_alternative<bool>(stack.back())) {cerr << "Didn't find a boolean in a boolean expression\n"; return 1;}
-            bool res = b.code == OR ? std::get<bool>(stack.front()) || std::get<bool>(stack.back()) : std::get<bool>(stack.front()) && std::get<bool>(stack.back());
+        case AND:
+            if (!holds_alternative<bool>(stack.front()) || !holds_alternative<bool>(stack.back())) callErr("Didn't find a boolean in a boolean expression\n", -1);
             stack.clear();
-            stack.emplace_back(res);
-        }
+            stack.emplace_back(b.code == OR ? get<bool>(stack.front()) || get<bool>(stack.back()) : get<bool>(stack.front()) && get<bool>(stack.back()));
             break;
         case IS_EQUAL_TO: {
-            bool res;
-            auto resolve = [stack]() {
-                auto front = stack.front();
-                auto back = stack.back();
-              switch (front.index()) {
-              case 0: return std::get<string>(front) == std::get<string>(back);
-              case 1: return std::get<int>(front) == std::get<int>(back);
-              case 2: return std::get<float>(front) == std::get<float>(back);
-              default: return std::get<bool>(front) == std::get<bool>(back);
-              }
-            };
-            if (operand1.index() == 1 && operand2.index() == 2 || operand1.index() == 2 && operand2.index() == 1) res = operand1.index() == 1 && operand2.index() == 2 ? std::get<int>(operand1) == std::get<float>(operand2) : std::get<float>(operand1) == std::get<int>(operand2);
-            else if (operand1.index() == operand2.index()) res = resolve();
-            else {cerr << "Was not booleans, could not compare\n"; return 1;}
+            auto res = visit([](auto&& front, auto&& back) {
+                using L = decay_t<decltype(&front)>;
+                using R = decay_t<decltype(&back)>;
+                if constexpr (is_same_v<L, int> && is_same_v<R, float>) front = static_cast<float>(front);
+                if constexpr (is_same_v<R, int> && is_same_v<L, float>) back = static_cast<float>(back);
+                if constexpr (is_same_v<L, R>) return front == back;
+                else return false;
+            }, stack.front(), stack.back());
 
             stack.clear();
             stack.emplace_back(res);
         }
             break;
         case GREATER_THAN: {
-            bool res;
-            auto resolve = [b, stack]() {
-                auto front = stack.front();
-                auto back = stack.back();
-                switch (front.index()) {
-                case 0: return b.sub_code == IS_EQUAL ? std::get<string>(front) >= std::get<string>(back) : std::get<string>(front) > std::get<string>(back);
-                case 1: return b.sub_code == IS_EQUAL ? std::get<int>(front) >= std::get<int>(back) : std::get<int>(front) > std::get<int>(back);
-                case 2: return b.sub_code == IS_EQUAL ? std::get<float>(front) >= std::get<float>(back) : std::get<float>(front) > std::get<float>(back);
-                default: return b.sub_code == IS_EQUAL ? std::get<bool>(front) >= std::get<bool>(back) : std::get<bool>(front) > std::get<bool>(back);
-                }
-            };
-            if (stack.front().index() == 1 || stack.front().index() == 2 &&stack.back().index() == 1 || stack.back().index() == 2)
-                if (b.sub_code == IS_EQUAL) res = stack.front().index() == 1 && stack.back().index() == 2 ? std::get<int>(stack.front()) >= std::get<float>(stack.back()) : std::get<float>(stack.front()) >= std::get<int>(stack.back());
-                else res = stack.front().index() == 1 && stack.back().index() == 2 ? std::get<int>(stack.front()) > std::get<float>(stack.back()) : std::get<float>(stack.front()) > std::get<int>(stack.back());
-            else res = resolve();
-
+            bool res = visit([b](auto&& front, auto&& back) {
+                using L = decay_t<decltype(&front)>;
+                using R = decay_t<decltype(&back)>;
+                if constexpr (is_same_v<L, int> && is_same_v<R, float>) front = static_cast<float>(front);
+                if constexpr (is_same_v<R, int> && is_same_v<L, float>) back = static_cast<float>(back);
+                
+                if constexpr (!is_same_v<L, float> || !is_same_v<R, float>) callErr("Could not do greater than (>/>=) between non-floats or non-ints", -1); else
+                    if (b.sub_code != IS_EQUAL) return front > back; else return front >= back;
+                        return false; // Yes, I know it's unreachable, but it prevents an error
+            }, stack.front(), stack.back());
             stack.clear();
             stack.emplace_back(res);
         }
             break;
         case LESS_THAN: {
-            bool res;
-            auto resolve = [b, stack]() {
-                auto front = stack.front();
-                auto back = stack.back();
-                switch (front.index()) {
-                case 1: return b.sub_code == IS_EQUAL ? std::get<int>(front) <= std::get<int>(back) : std::get<int>(front) < std::get<int>(back);
-                case 2: return b.sub_code == IS_EQUAL ? std::get<float>(front) <= std::get<float>(back) : std::get<float>(front) < std::get<float>(back);
-                default: //TODO: call error
-                }
-            };
-            if (stack.front().index() == 1 || stack.front().index() == 2 &&stack.back().index() == 1 || stack.back().index() == 2)
-                if (b.sub_code == IS_EQUAL) res = stack.front().index() == 1 && stack.back().index() == 2 ? std::get<int>(stack.front()) <= std::get<float>(stack.back()) : std::get<float>(stack.front()) <= std::get<int>(stack.back());
-                else res = stack.front().index() == 1 && stack.back().index() == 2 ? std::get<int>(stack.front()) < std::get<float>(stack.back()) : std::get<float>(stack.front()) < std::get<int>(stack.back());
-            else res = resolve();
-
+            bool res = visit([b](auto&& front, auto&& back) {
+                using L = decay_t<decltype(&front)>;
+                using R = decay_t<decltype(&back)>;
+                if constexpr (is_same_v<L, int> && is_same_v<R, float>) front = static_cast<float>(front);
+                if constexpr (is_same_v<R, int> && is_same_v<L, float>) back = static_cast<float>(back);
+                
+                if constexpr (!is_same_v<L, float> || !is_same_v<R, float>) callErr("Could not do less than (</<=) between non-floats or non-ints", -1); else
+                if (b.sub_code != IS_EQUAL) return front < back; else return front <= back;
+                    return false;
+            }, stack.front(), stack.back());
             stack.clear();
             stack.emplace_back(res);
         }
             break;
         case PRINT:
-                if (std::holds_alternative<string>(b.value) && std::get<string>(b.value) == "table") {
-                    std::visit([](auto&& val) {cout << val << endl;}, stack.back());
+                if (holds_alternative<string>(b.value) && get<string>(b.value) == "table") {
+                    visit([](auto&& val) {cout << val << endl;}, stack.back());
                     stack.clear();
-                } else std::visit([](auto&& val) {cout << val << endl;}, b.value);
+                } else visit([](auto&& val) {cout << val << endl;}, b.value);
                 break;
         case SCOPE_END:
             scope.pop_back();

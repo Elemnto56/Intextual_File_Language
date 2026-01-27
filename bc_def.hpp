@@ -37,7 +37,6 @@ struct Instr {
     int jump = -1;
 };
 
-
 std::vector<Instr> bc_gen(std::vector<IR> ir);
 int executor(std::vector<Instr> bc);
 #endif //ITX_BC_DEF_HPP

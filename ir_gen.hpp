@@ -5,23 +5,6 @@
 #include <unordered_map>
 
 #include "lex_def.hpp"
-enum ErrorType {
-    MISSING_TOKEN,
-    BAD_TYPE,
-    LEX_ERR
-};
-
-inline void callErr(ErrorType et, std::string err_desc, int line, int status_code = 1) {
-    std::cerr << "line: " << line << std::endl;
-    std::cerr << err_desc << std::endl;
-
-    switch (et) {
-    case BAD_TYPE: std::cerr << "hint: The four built-in types are int, float, string, and bool" << std::endl;
-    default: break;
-    }
-
-    exit(status_code);
-}
 
 struct IR;
 using ir_type = std::variant<std::vector<Lex>, std::vector<IR>>;
@@ -34,5 +17,6 @@ struct IR {
     int line;
 };
 
+std::vector<IR> ir_check(const std::vector<IR>& ir);
 std::vector<IR> ir_gen(std::vector<Lex> tokens);
 #endif //ITX_IR_GEN_HPP

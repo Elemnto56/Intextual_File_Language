@@ -1,1 +1,3 @@
-if (true) {output "Hello";}
+!alias output out
+
+out "Hello";

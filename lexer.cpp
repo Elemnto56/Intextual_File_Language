@@ -17,23 +17,30 @@ vector<string> split_by_ws(string test) {
 }
 
 vector<Lex> lexer(vector<string> lines, char stop_at) {
+    std::unordered_map<string, string> alias{{"print", "output"}};
     vector<Lex> allTokens{};
-
     int j;
     int i = j = 0;
+
     while (i < lines.size()) {
         string line= lines[i];
         if (line.contains("//")) line = boost::regex_replace(line, boost::regex(R"(\/\/.+)"), "");
         if (line.empty() || ranges::all_of(line, [](unsigned char c){return isspace(c);})) { i++; continue; }
         line.erase(line.begin(), ranges::find_if_not(line, [](unsigned char ch) {return isspace(ch);}));
 
-        if (string pos_keyword = split_by_ws(line)[0]; contains(pos_keyword, {"while", "if", "else if", "else"})) {
+        string pos_keyword;
+        vector keywords = split_by_ws(line);
+        if (keywords[0] == "!alias") { alias.insert({keywords[2], keywords[1]}); i++; continue;}
+
+        pos_keyword = alias.contains(keywords[0]) ? pos_keyword = alias[keywords[0]] : pos_keyword = keywords[0];
+        if (contains(pos_keyword, {"while", "if", "else if", "else"})) {
             allTokens.push_back({
                 .meta = pos_keyword,
                 .type = L_KEYWORD,
                 .line = i+1
             });
 
+            if (alias.contains(keywords[0])) pos_keyword = keywords[0];
             j += static_cast<int>(pos_keyword.size());
         }
 
@@ -64,7 +71,7 @@ vector<Lex> lexer(vector<string> lines, char stop_at) {
 
             if (j+1 < line.size() && line.substr(j, 2) == "->") {
                 allTokens.push_back({
-                    .value = line.substr(j, 2),
+                    .meta = line.substr(j, 2),
                     .type = SYMBOL,
                     .line = i+1
                 });
@@ -76,14 +83,14 @@ vector<Lex> lexer(vector<string> lines, char stop_at) {
                 line.substr(j, 2) == "&&" || line.substr(j, 2) == "||" ?
                 allTokens.push_back({
                     .sub_type = BOOL,
-                    .value = line.substr(j, 2),
+                    .meta = line.substr(j, 2),
                     .type = OPERATOR,
                     .line = i+1,
                 })
                 :
                 allTokens.push_back({
                     .sub_type = COMPARE,
-                    .value = line.substr(j, 2),
+                    .meta = line.substr(j, 2),
                     .type = OPERATOR,
                     .line = i+1
                 });
@@ -95,7 +102,7 @@ vector<Lex> lexer(vector<string> lines, char stop_at) {
             if (j+1 < line.size() && contains(line.substr(j, 2), {"+=", "-=", "*=", "/=", "%=", "++", "--"})) {
                 allTokens.push_back({
                     .sub_type = MATH,
-                    .value = line.substr(j, 2),
+                    .meta = line.substr(j, 2),
                     .type = OPERATOR,
                     .line = i+1
                 });
@@ -191,7 +198,7 @@ vector<Lex> lexer(vector<string> lines, char stop_at) {
                     j++;
                 }
                 allTokens.push_back({
-                    .value = var_name,
+                    .meta = var_name,
                     .type = VARIABLE,
                     .line = i+1
                 });
@@ -206,7 +213,7 @@ vector<Lex> lexer(vector<string> lines, char stop_at) {
             case '*':
                 allTokens.push_back({
                     .sub_type = MATH,
-                    .value = std::string{ch},
+                    .meta = std::string{ch},
                     .type = OPERATOR,
                     .line = i+1
                 });
@@ -216,13 +223,13 @@ vector<Lex> lexer(vector<string> lines, char stop_at) {
             case '<':
                 allTokens.push_back({
                     .sub_type = COMPARE,
-                    .value = std::string{ch},
+                    .meta = std::string{ch},
                     .type = OPERATOR,
                     .line = i+1
                 });
             case '=':
                 allTokens.push_back({
-                    .value = std::string{ch},
+                    .meta = "=",
                     .type = OPERATOR,
                     .line = i+1
                 });
@@ -247,10 +254,7 @@ vector<Lex> lexer(vector<string> lines, char stop_at) {
                     j++;
                 }
 
-                if (j >= line.size()) {
-                    cerr << "Lexer:\n\tstring ranged out on line " << i+1 << endl;
-                    exit(1);
-                }
+                if (j >= line.size()) callErr("string ranged out", i+1);
 
                 allTokens.push_back({
                     .sub_type = STRING,
@@ -264,7 +268,7 @@ vector<Lex> lexer(vector<string> lines, char stop_at) {
             case '\'': {
                 j++;
                 char user_ch = line[j];
-                if (line[++j] != '\'') callErr(LEX_ERR, "Malformed single character", i+1);
+                if (line[++j] != '\'') callErr("Malformed single character", i+1);
                 allTokens.push_back({
                     .sub_type = STRING,
                     .value = std::string{user_ch},
@@ -357,7 +361,7 @@ vector<Lex> lexer(vector<string> lines, char stop_at) {
                 continue;
             default:
                 allTokens.push_back({
-                    .value = string{ch},
+                    .meta = string{ch},
                     .type = OPERATOR,
                     .line = i+1
                 });

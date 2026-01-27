@@ -5,7 +5,6 @@
 #ifndef ITX_EXPR_ENGINE_HPP
 #define ITX_EXPR_ENGINE_HPP
 #include <iostream>
-#include <source_location>
 #include <vector>
 
 #include "lex_def.hpp"
@@ -46,7 +45,7 @@ private:
         auto left = parseCompare();
 
         while (e_pos+1 < expr.size() && (expr[e_pos].type == OPERATOR && expr[e_pos].sub_type == BOOL)) {
-            if (std::get<string>(expr[e_pos].value) != "&&") return left;
+            if (expr[e_pos].meta != "&&") return left;
             ++e_pos;
             auto right = parseCompare();
             left = std::get<bool>(left) && std::get<bool>(right);
@@ -59,7 +58,7 @@ private:
         auto left = parseAddnSub();
 
         if (e_pos+1 < expr.size() && (expr[e_pos+1].type == OPERATOR && expr[e_pos+1].sub_type == COMPARE)) {
-            auto operator_ = std::get<string>(expr[e_pos+1].value);
+            auto operator_ = expr[e_pos+1].meta;
             e_pos += 2;
             auto right = parseAddnSub();
             return compare(left, operator_, right);
@@ -73,22 +72,31 @@ private:
 
         while (e_pos+1 < expr.size()) {
             if (expr[e_pos+1].type != OPERATOR && expr[e_pos+1].sub_type != MATH) break;
-            auto operator_ = e_pos+1 < expr.size() ? std::get<string>(expr[e_pos+1].value) : "";
+            auto operator_ = e_pos+1 < expr.size() ? expr[e_pos+1].meta : "";
             if (operator_ != "+" && operator_ != "-" || operator_ != "-" && operator_ != "+") break;
 
             e_pos += 2;
             auto right = parseMultnDiv();
 
-            if (operator_ == "+" && left.index() == right.index()) {
-                switch (left.index()) {
-                case 0: left = std::get<string>(left) + std::get<string>(right); break;
-                case 1: left = std::get<int>(left) + std::get<int>(right); break;
-                case 2: left = std::get<float>(left) + std::get<float>(right); break;
-                    default: break;
+            if (std::holds_alternative<int>(left)&&std::holds_alternative<float>(right)) left = static_cast<float>(std::get<int>(left));
+            if (std::holds_alternative<int>(right)&&std::holds_alternative<float>(left)) right = static_cast<float>(std::get<int>(right));
+            if (left.index() == right.index()) {
+                if (operator_ == "-") {
+                    if (!std::holds_alternative<string>(left)&&!std::holds_alternative<string>(right)) switch (left.index()) {
+                    case 1: left = std::get<int>(left) + std::get<int>(right); break;
+                    case 2: left = std::get<float>(left) + std::get<float>(right); break;
+                    default: callErr("Cannot subtract two booleans or with another type", expr[e_pos].line);
+                    } else callErr("Cannot subtract two strings or with another type", expr[e_pos].line);
+                } else {
+                    if (!std::holds_alternative<bool>(left)&&!std::holds_alternative<bool>(right))
+                        switch (left.index()) {
+                        case 0: left = std::get<string>(left) + std::get<string>(right); break;
+                        case 1: left = std::get<int>(left) + std::get<int>(right); break;
+                        case 2: left = std::get<float>(left) + std::get<float>(right); break;
+                        }
+                    else callErr("Cannot add two booleans or with another type", expr[e_pos].line);
                 }
-            } else if (operator_ == "-" && left.index() == right.index() && (left.index() == 1 || left.index() == 2)) {
-                left = left.index() == 1 ? std::get<int>(left) - std::get<int>(right) : std::get<float>(left) - std::get<float>(right);
-            }
+            } else callErr("Cannot perform math on two different types (unless it's an int and float)", expr[e_pos].line);
         }
 
         return left;
@@ -99,7 +107,7 @@ private:
 
         while (e_pos+1 < expr.size()) {
             if (expr[e_pos+1].type != OPERATOR && expr[e_pos+1].sub_type != MATH) break;
-            auto operator_ = std::get<string>(expr[e_pos+1].value);
+            auto operator_ = expr[e_pos+1].meta;
             if (operator_ != "*" && operator_ != "/" || operator_ != "/" && operator_ != "*") break;
 
             e_pos += 2;
@@ -136,26 +144,24 @@ private:
     }
 
     bool compare(itx_types left, string op, itx_types right) {
-        // Possibly change this in the future, as other types may be able to compare to each other (i.e. int and bool)
-        if (left.index() != right.index()) return false;
-        switch (left.index()) {
-        case 0:
-            if (op == "==") return std::get<string>(left) == std::get<string>(right);
-            if (op == "!=") return std::get<string>(left) != std::get<string>(right);
-            //callErr(BAD_TYPE, "Invalid operation with two strings", expr[0].line);
-        case 1:
-            if (op == "==") return std::get<int>(left) == std::get<int>(right);
-            if (op == "!=") return std::get<int>(left) != std::get<int>(right);
-            break;
-        case 2:
-            if (op == "==") return std::get<float>(left) == std::get<float>(right);
-            if (op == "!=") return std::get<float>(left) != std::get<float>(right);
-            break;
-        case 3:
-            if (op == "==") return std::get<bool>(left) == std::get<bool>(right);
-            if (op == "!=") return std::get<bool>(left) != std::get<bool>(right);
-            break;
-        }
+        return std::visit([op](auto&& l, auto&& r) {
+            using lt = std::decay_t<decltype(l)>;
+            using rt = std::decay_t<decltype(r)>;
+
+            if constexpr (is_same_v<lt, int> && is_same_v<rt, float>) l = static_cast<float>(l);
+            if constexpr (is_same_v<rt, int> && is_same_v<lt, float>) r = static_cast<float>(r);
+
+            if constexpr (std::is_same_v<lt, rt>) {
+                if (op == "==") return l == r;
+                if (op == "!=") return l != r;
+                if (op == ">=") return l >= r;
+                if (op == "<=") return l <= r;
+                if (op == ">") return l > r;
+                if (op == "<") return l < r;
+            }
+
+            return false;
+        }, left, right);
     }
 public:
     Expression(vector<Lex> expr, std::unordered_map<string, itx_types> vars = {}) : variables(std::move(vars)), expr(std::move(expr)) {}

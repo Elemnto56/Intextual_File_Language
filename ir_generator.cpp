@@ -22,15 +22,14 @@ vector<IR> ir_gen(vector<Lex> tokens) {
             else if (type == "string") var_declare.r_type = STRING;
             else if (type == "float") var_declare.r_type = FLOAT;
             else if (type == "bool") var_declare.r_type = BOOL;
-            else callErr(BAD_TYPE, "Invalid type: \""+type+"\"", token.line);
+            else callErr("Invalid type: \""+type+"\"", token.line);
 
-            if (tokens[++i].type == VARIABLE) var_declare.lvalue = get<string>(tokens[i].value); else {
-                std::cerr << "Not a valid variable name\n line " << tokens[i].line;
-                exit(1);
+            if (tokens[++i].type == VARIABLE) var_declare.lvalue = tokens[i].meta; else {
+                callErr("Not a valid variable name", tokens[i].line);
             }
             var_declare.l_type = VARIABLE;
 
-            if (tokens[++i].type != OPERATOR && std::get<string>(tokens[i].value) != "=") callErr(MISSING_TOKEN, "Expected an '=' in this variable declaration", tokens[i].line);
+            if (tokens[++i].type != OPERATOR && tokens[i].meta != "=") callErr("Expected an '=' in this variable declaration", tokens[i].line);
 
             i++;
             vector<Lex> expr;
@@ -85,7 +84,7 @@ vector<IR> ir_gen(vector<Lex> tokens) {
                 if (!find_var_expr(expr.scope)) {
                     bool pos_bool;
                     try {pos_bool = std::get<bool>(Expression(expr.scope).solve());} catch (...) {
-                        std::cerr << "The expression in line " << expr.line << " did not return a boolean\n"; exit(1);
+                        callErr("The expression in line " + std::to_string(expr.line) + " did not return a boolean\n", tokens[i].line);
                     }
 
                     all_ir.push_back({
@@ -109,6 +108,23 @@ vector<IR> ir_gen(vector<Lex> tokens) {
                     });
                 }
             }
+            else if (token.meta == "while") {
+                auto expr = tokens[++i];
+                if (!find_var_expr(expr.scope)) {
+                    bool pos_bool;
+                    try {pos_bool = std::get<bool>(Expression(expr.scope).solve());} catch (...) {
+                        callErr("The expression in line " + std::to_string(expr.line) + " did not return a boolean\n", tokens[i].line);
+                    }
+
+                    all_ir.push_back({
+                        .rvalue = pos_bool,
+                        .lvalue = "while",
+                        .l_type = L_KEYWORD,
+                        .r_type = BOOL,
+                        .line = expr.line
+                    });
+                }
+            }
         }
         else if (token.type == BODY) {
             all_ir.push_back({
@@ -118,14 +134,31 @@ vector<IR> ir_gen(vector<Lex> tokens) {
             });
         }
         else if (token.type == VARIABLE ||(token.type == OPERATOR && token.sub_type == MATH)) {
-            if (token.type == OPERATOR) {
-                if (tokens[++i].type != VARIABLE) exit(1); //TODO: Call error
-                if (tokens[i].sub_type != INT || tokens[i].sub_type != FLOAT) exit(1);
-
-                //TODO: Support re-assignments (i.e. x += 1, ++x, x = 5)
-               // all_ir.push_back({
-                 //   .metadata = {{"incr", ""}}
-                //});
+            if (tokens[++i].meta == "=") {
+                vector<Lex> expr;
+                i++;
+                while (tokens[i].meta != ";") {expr.push_back(tokens[i]); i++;}
+                if (!find_var_expr(expr))
+                    all_ir.push_back({
+                        .rvalue = Expression(expr).solve(),
+                        .metadata = {{"re-assign", {}}},
+                        .lvalue = token.meta,
+                        .l_type = VARIABLE,
+                        .line = tokens[i].line
+                    });
+                else {
+                    all_ir.push_back({
+                        .metadata = {{"expression",  expr}},
+                        .l_type = LOGIC,
+                        .line = tokens[i].line
+                    });
+                    all_ir.push_back({
+                        .metadata = {{"no-val", {}}, {"re-assign", {}}},
+                        .lvalue = token.meta,
+                        .l_type = VARIABLE,
+                        .line = tokens[i].line
+                    });
+                }
             }
         }
 
@@ -133,4 +166,19 @@ vector<IR> ir_gen(vector<Lex> tokens) {
     }
 
     return all_ir;
+}
+
+vector<IR> ir_check(const vector<IR>& ir) {
+    int i{};
+    std::unordered_map<string, LexSubType> type_table;
+
+    while (i < ir.size()) {
+        if (ir[i].l_type == VARIABLE) {
+            if (ir[i].metadata.contains("re-assign")) {if (!type_table.contains(ir[i].lvalue)) callErr("Could not find variable " + ir[i].lvalue, ir[i].line); if (type_table[ir[i].lvalue] != ir[i].r_type) callErr("Variable " + ir[i].lvalue + " re-assign did not match the original " + type_look[type_table[ir[i].lvalue]], ir[i].line);}
+            else type_table.insert({ir[i].lvalue, ir[i].r_type});
+        }
+        i++;
+    }
+
+    return ir;
 }
