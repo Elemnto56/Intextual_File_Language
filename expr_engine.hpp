@@ -4,7 +4,8 @@
 
 #ifndef ITX_EXPR_ENGINE_HPP
 #define ITX_EXPR_ENGINE_HPP
-#include <iostream>
+#include <cmath>
+#include <functional>
 #include <vector>
 
 #include "lex_def.hpp"
@@ -21,10 +22,18 @@ using namespace std;
  */
 
 using test = variant<bool>;
+inline std::unordered_map<std::string, itx_types> compile_time_constants;
 
 class Expression {
 private:
-    unordered_map<string, itx_types> variables{};
+    std::function<LexSubType(size_t)> valToType = [](size_t index) {
+        switch(index) {
+            case 0: return STRING;
+            case 1: return INT;
+            case 2: return FLOAT;
+            default: return  BOOL;
+        }
+    };
     int e_pos = 0;
     vector<Lex> expr;
 
@@ -73,7 +82,7 @@ private:
         while (e_pos+1 < expr.size()) {
             if (expr[e_pos+1].type != OPERATOR && expr[e_pos+1].sub_type != MATH) break;
             auto operator_ = e_pos+1 < expr.size() ? expr[e_pos+1].meta : "";
-            if (operator_ != "+" && operator_ != "-" || operator_ != "-" && operator_ != "+") break;
+            if (operator_ != "+" && operator_ != "-") break;
 
             e_pos += 2;
             auto right = parseMultnDiv();
@@ -108,7 +117,7 @@ private:
         while (e_pos+1 < expr.size()) {
             if (expr[e_pos+1].type != OPERATOR && expr[e_pos+1].sub_type != MATH) break;
             auto operator_ = expr[e_pos+1].meta;
-            if (operator_ != "*" && operator_ != "/" || operator_ != "/" && operator_ != "*") break;
+            if (operator_ != "*" && operator_ != "/" && operator_ != "%") break;
 
             e_pos += 2;
             auto right = parsePrimary();
@@ -116,6 +125,7 @@ private:
             if (left.index() == right.index() && (left.index() == 1 || left.index() == 2)) {
                 if (operator_ == "*") left.index() == 1 ? left = std::get<int>(left) * std::get<int>(right) : left = std::get<float>(left) * std::get<float>(right);
                 if (operator_ == "/") left.index() == 1 ? left = std::get<int>(left) / std::get<int>(right) : left = std::get<float>(left) / std::get<float>(right);
+                if (operator_ == "/") left.index() == 1 ? left = std::get<int>(left) % std::get<int>(right) : left = std::fmod(std::get<float>(left), std::get<float>(right));
             }
         }
 
@@ -124,17 +134,20 @@ private:
 
     itx_types parsePrimary() {
         if (e_pos >= expr.size()) {
-            cerr << "Unexpected end of expression on line " << expr[0].line << endl;
+            callErr("Empty expression", !expr.empty() ? expr[0].line : -1);
             exit(1);
+        }
+
+        if (expr[e_pos].type == VARIABLE) {
+            expr[e_pos].value = compile_time_constants[expr[e_pos].meta];
+            expr[e_pos].sub_type = valToType(expr[e_pos].value.index());
+            expr[e_pos].type = TYPE;
         }
 
         if (expr[e_pos].meta == "expression") {
 
             expr[e_pos].value = Expression(expr[e_pos].scope).solve();
-            if (auto new_val = expr[e_pos].value.index(); new_val == 0) expr[e_pos].sub_type = STRING;
-            else if (new_val == 1) expr[e_pos].sub_type = INT;
-            else if (new_val == 2) expr[e_pos].sub_type = FLOAT;
-            else expr[e_pos].sub_type = BOOL;
+            expr[e_pos].sub_type = valToType(expr[e_pos].value.index());
 
             if (e_pos+1 < expr.size() && expr[e_pos+1].type != OPERATOR && expr[e_pos+1].type == TYPE && expr[e_pos+1].sub_type != BUILT_IN) expr.insert(expr.begin()+(e_pos+1), {.sub_type = MATH, .value = "*", .type = OPERATOR, .line = expr[e_pos].line});
             if (e_pos-1 >= 0 && expr[e_pos-1].type != OPERATOR && expr[e_pos-1].type == TYPE && expr[e_pos-1].sub_type != BUILT_IN) expr.insert(expr.begin()+(e_pos-1), {.sub_type = MATH, .value = "*", .type = OPERATOR, .line = expr[e_pos].line});
@@ -164,7 +177,7 @@ private:
         }, left, right);
     }
 public:
-    Expression(vector<Lex> expr, std::unordered_map<string, itx_types> vars = {}) : variables(std::move(vars)), expr(std::move(expr)) {}
+    Expression(vector<Lex> expr) : expr(std::move(expr)) {}
 
     itx_types solve() {
         return parseOr();

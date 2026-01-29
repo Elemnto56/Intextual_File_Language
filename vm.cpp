@@ -1,13 +1,33 @@
+#include <ranges>
 #include <vector>
 #include <iostream>
+#include <type_traits>
 
 #include "bc_def.hpp"
+#include "expr_engine.hpp"
 
 using namespace std;
 int executor(vector<Instr> bc) {
     vector<itx_types> stack;
     vector<unordered_map<string, itx_types>> scope{{}};
-    int c_scope{};
+
+    int currentScope{};
+    int lastPos;
+    auto findVar = [&](const string& varName) {
+        lastPos=0;
+        for (auto lastScope = scope.begin(); lastScope != scope.end(); ++lastScope) {
+            if (lastScope->contains(varName)) {
+                lastPos = static_cast<int>(std::distance(scope.begin(), lastScope));
+                return true;
+            }
+        }
+        return false;
+    };
+    auto getVar = [&](const string& varName) {
+        for (auto& lastScope : std::ranges::reverse_view(scope)) if (lastScope.contains(varName)) return lastScope[varName];
+        return itx_types{varName};
+    };
+    for (const auto& symbol : compile_time_constants) scope[0].insert(symbol);
 
     cout << boolalpha;
 
@@ -18,26 +38,31 @@ int executor(vector<Instr> bc) {
         operand2 = stack.size() == 2 ? stack[1] : "";
 
         switch (auto b = bc[i]; b.code) {
-        case PULL: stack.push_back(scope[c_scope][get<string>(b.value)]); break;
+        case PULL: stack.push_back(getVar(get<string>(b.value))); break;
         case PUSH: stack.push_back(b.value); break;
         case STORE:
-            if (scope[c_scope].contains(std::get<string>(b.value))) scope[c_scope][std::get<string>(b.value)] = stack.back();
-            else scope[c_scope].insert({get<string>(b.value), stack.back()});
+            if (compile_time_constants.contains(std::get<string>(b.value))) callErr("Cannot re-assign a constant", -1);
+            if (findVar(std::get<string>(b.value))) scope[lastPos][std::get<string>(b.value)] = stack.back();
+            else scope[currentScope].insert({get<string>(b.value), stack.back()});
             stack.clear();
             break;
+        case LOOP_START:
         case IF_TRUE:
             if (holds_alternative<string>(b.value) && get<string>(b.value) == "table") {
                 if (!holds_alternative<bool>(stack.back())) {cerr << "Expected a boolean but didn't receive one\n"; return  1;}
                 if (!get<bool>(stack.back())) {i = b.jump; continue;}
             }
             else { if (!get<bool>(b.value)) {i = b.jump; continue;} }
-            bc.insert(bc.begin()+(b.jump-1), {.code = SCOPE_END});
-            scope.emplace_back(scope[c_scope]);
-            c_scope++;
+            if (b.code == LOOP_START) stack.clear();
+            scope.emplace_back();
+            currentScope++;
             break;
+        case LOOP_END:
+        case FORCE_JUMP: i = b.jump; goto skip_itr;
         case MATH_:
-            if (holds_alternative<string>(operand1) && scope[c_scope].contains(get<string>(operand1))) operand1 = scope[c_scope][get<string>(operand1)];
-            if (holds_alternative<string>(operand2) && scope[c_scope].contains(get<string>(operand2))) operand2 = scope[c_scope][get<string>(operand2)];
+            // checks for variables
+            if (holds_alternative<string>(operand1)) operand1 = getVar(get<string>(operand1));
+            if (holds_alternative<string>(operand2)) operand2 = getVar(std::get<string>(operand2));
             
             visit([b, &stack](auto&& op1, auto&& op2) {
                 using L = decay_t<decltype(op1)>;
@@ -57,6 +82,10 @@ int executor(vector<Instr> bc) {
                     if constexpr (is_same_v<L, string>) callErr("Could not perform division between two strings", -1);
                     else stack.emplace_back(op1 / op2);
                     break;
+                case MOD:
+                    if constexpr (is_same_v<L, string>) callErr("Could not perform modulo between two strings", -1);
+                    else stack.emplace_back(static_cast<float>(std::fmod(op1, op2)));
+                    break;
                 default:
                     if constexpr (is_same_v<L, string>) callErr("Could not perform multiplication between two strings", -1);
                     else stack.emplace_back(op1 * op2);
@@ -74,8 +103,8 @@ int executor(vector<Instr> bc) {
             auto res = visit([](auto&& front, auto&& back) {
                 using L = decay_t<decltype(&front)>;
                 using R = decay_t<decltype(&back)>;
-                if constexpr (is_same_v<L, int> && is_same_v<R, float>) front = static_cast<float>(front);
-                if constexpr (is_same_v<R, int> && is_same_v<L, float>) back = static_cast<float>(back);
+                if constexpr (is_same_v<L, int*> && is_same_v<R, float*>) front = static_cast<float>(front);
+                if constexpr (is_same_v<R, int*> && is_same_v<L, float*>) back = static_cast<float>(back);
                 if constexpr (is_same_v<L, R>) return front == back;
                 else return false;
             }, stack.front(), stack.back());
@@ -91,7 +120,7 @@ int executor(vector<Instr> bc) {
                 if constexpr (is_same_v<L, int> && is_same_v<R, float>) front = static_cast<float>(front);
                 if constexpr (is_same_v<R, int> && is_same_v<L, float>) back = static_cast<float>(back);
                 
-                if constexpr (!is_same_v<L, float> || !is_same_v<R, float>) callErr("Could not do greater than (>/>=) between non-floats or non-ints", -1); else
+                if constexpr ((!is_same_v<L, float*> || !is_same_v<R, float*>) && (!is_same_v<L, int*> || !is_same_v<R, int*>)) callErr("Could not do greater than (>/>=) between non-floats or non-ints", -1); else
                     if (b.sub_code != IS_EQUAL) return front > back; else return front >= back;
                         return false; // Yes, I know it's unreachable, but it prevents an error
             }, stack.front(), stack.back());
@@ -101,14 +130,16 @@ int executor(vector<Instr> bc) {
             break;
         case LESS_THAN: {
             bool res = visit([b](auto&& front, auto&& back) {
-                using L = decay_t<decltype(&front)>;
-                using R = decay_t<decltype(&back)>;
+                using L = std::decay_t<decltype(&front)>;
+                using R = std::decay_t<decltype(&back)>;
                 if constexpr (is_same_v<L, int> && is_same_v<R, float>) front = static_cast<float>(front);
                 if constexpr (is_same_v<R, int> && is_same_v<L, float>) back = static_cast<float>(back);
-                
-                if constexpr (!is_same_v<L, float> || !is_same_v<R, float>) callErr("Could not do less than (</<=) between non-floats or non-ints", -1); else
-                if (b.sub_code != IS_EQUAL) return front < back; else return front <= back;
-                    return false;
+
+                if constexpr ((std::is_same_v<L, float*> && std::is_same_v<R, float*>) || (std::is_same_v<L, int*> && std::is_same_v<R, int*>)) {
+                    if (b.sub_code != IS_EQUAL)return front < back;
+                    return front <= back;
+                } else callErr("Could not do less than (</<=) between non-floats or non-ints", -1);
+                return false;
             }, stack.front(), stack.back());
             stack.clear();
             stack.emplace_back(res);
@@ -122,14 +153,14 @@ int executor(vector<Instr> bc) {
                 break;
         case SCOPE_END:
             scope.pop_back();
-            c_scope--;
+            currentScope--;
             break;
-        default:
-            goto loop_end;
+        case EXPR_START: break; // Jump labels will do nothing
+        default: return 0;
         }
 
         i++;
+        skip_itr:;
     }
-    loop_end:;
     return 0;
 }

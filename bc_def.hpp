@@ -19,14 +19,19 @@ enum BC {
     IS_EQUAL_TO,
     LESS_THAN,
     IF_TRUE,
-    SCOPE_END
+    SCOPE_END,
+    FORCE_JUMP,
+    LOOP_START, // Can continue or jump depending on condition
+    LOOP_END,
+    EXPR_START
 };
 
 enum BC_SUB {
     ADD,
     SUB,
     MULT,
-    DIV, // Division as in math
+    DIV,
+    MOD,
     IS_EQUAL
 };
 

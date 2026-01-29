@@ -28,7 +28,7 @@ enum LexSubType {
     VAR,
     MATH,
     COMPARE,
-    R_CURL
+    COMPILE_CONST
 };
 
 enum LexMainType {
@@ -74,5 +74,7 @@ inline void callErr(std::string_view err_desc, const int line, const int status_
     << err_desc << std::endl;
     exit(status_code);
 }
+
+inline std::unordered_map<std::string, std::string> alias{{"print", "output"}, {"const", "compile_const"}};
 std::vector<Lex> lexer(std::vector<std::string> lines, char stop_at = '~');
 #endif //INTEXTUAL_FILE_LANGUAGE_DEF_HPP

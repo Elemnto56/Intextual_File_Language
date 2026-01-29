@@ -1,4 +1,3 @@
-#include <complex>
 #include <fstream>
 #include <iostream>
 
@@ -8,6 +7,8 @@
 #include "lex_def.hpp"
 
 #define DEBUG 0
+
+//TODO: Create macros
 
 int main(int argc, char* argv[]) {
     if (argc > 2 || argc < 2) {std::cerr << "Too many or too little args provided\n"; return 1;}
